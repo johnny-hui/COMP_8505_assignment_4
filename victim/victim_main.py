@@ -111,7 +111,6 @@ if __name__ == '__main__':
                                 break  # No more data received
                             if file_data.endswith(eof_marker):
                                 file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                                print(constants.TRANSFER_SUCCESS_MSG.format(filename))
                                 break
                             else:
                                 file.write(file_data)
