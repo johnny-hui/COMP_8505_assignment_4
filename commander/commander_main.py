@@ -64,7 +64,7 @@ if __name__ == '__main__':
                     _, target_socket, target_ip, target_port = connect_to_client_with_prompt(sockets_to_read,
                                                                                              connected_clients)
 
-            #  c) If not server or stdin sockets, then handle data coming from clients
+            #  c) If not from server or stdin sockets, then handle data coming from clients
             else:
                 # Data is available to read from an existing client connection
                 data = sock.recv(constants.BYTE_LIMIT)

