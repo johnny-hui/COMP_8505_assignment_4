@@ -211,9 +211,7 @@ if __name__ == '__main__':
                         watch_file(client_socket, file_path, signal_queue)
 
                         # Close Watch Stop Thread
-                        print(constants.THREAD_STOPPING_MSG.format(watch_stop_thread.name))
                         watch_stop_thread.join()
-                        print(constants.THREAD_STOPPED_MSG)
                     else:
                         print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
                         client_socket.send((constants.STATUS_FALSE + "/" +

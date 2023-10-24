@@ -125,6 +125,7 @@ def watch_stop_signal(client_socket: socket.socket, signal_queue: queue.Queue):
             if signal == constants.STOP_KEYWORD:
                 print(constants.CLIENT_RESPONSE.format(signal))
                 signal_queue.put(signal)
+                print(constants.WATCH_FILE_SIGNAL_THREAD_END)
                 return None
         except socket.timeout as e:
             print("[+] ERROR: Connection to client has timed out : {}".format(e))
@@ -153,7 +154,6 @@ def watch_file(client_socket: socket.socket,
                 # Check signal for stop before processing event
                 if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
                     notifier.remove_watch(file_path)
-                    print("[+] ENDING THREAD: watch_file has stopped!")
                     return None
 
                 if event is not None:

