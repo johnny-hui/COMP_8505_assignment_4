@@ -199,13 +199,21 @@ if __name__ == '__main__':
 
                         # Open a separate thread to monitor commander socket (prevent recv() from program hang)
                         signal_queue = queue.Queue()
-                        watch_stop_thread = threading.Thread(target=watch_stop_signal, args=(client_socket,
-                                                                                             signal_queue,))
+                        watch_stop_thread = threading.Thread(target=watch_stop_signal,
+                                                             args=(client_socket,
+                                                                   signal_queue,),
+                                                             name="Watch_Stop_Signal")
                         watch_stop_thread.daemon = True
                         watch_stop_thread.start()
+                        print(constants.THREAD_START_MSG.format(watch_stop_thread.name))
 
                         # IMPORTANT Send to the commander whenever the file has an event
                         watch_file(client_socket, file_path, signal_queue)
+
+                        # Close Watch Stop Thread
+                        print(constants.THREAD_STOPPING_MSG.format(watch_stop_thread.name))
+                        watch_stop_thread.join()
+                        print(constants.THREAD_STOPPED_MSG)
                     else:
                         print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
                         client_socket.send((constants.STATUS_FALSE + "/" +

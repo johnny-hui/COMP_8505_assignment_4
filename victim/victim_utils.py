@@ -5,6 +5,9 @@ import os
 import queue
 import socket
 import sys
+import threading
+import time
+
 import constants
 import importlib
 import inotify.adapters
@@ -101,22 +104,6 @@ def is_importable(file_name: str):
         return False
 
 
-def watch_stop_signal(client_socket: socket.socket, signal_queue: queue.Queue):
-    while True:
-        try:
-            signal = client_socket.recv(100).decode()
-            if signal == "STOP":
-                print(constants.CLIENT_RESPONSE.format(signal))
-                signal_queue.put(signal)
-                return None
-        except socket.timeout as e:
-            print("[+] ERROR: Connection to client has timed out : {}".format(e))
-            break
-        except socket.error as e:
-            print("[+] Socket error: {}".format(e))
-            break
-
-
 def delete_file(file_path: str):
     try:
         if os.path.exists(file_path):
@@ -131,7 +118,26 @@ def delete_file(file_path: str):
         print(f"[+] ERROR: An error occurred while deleting the file: {e}")
 
 
-def watch_file(client_socket: socket.socket, file_path: str, signal_queue: queue.Queue):
+def watch_stop_signal(client_socket: socket.socket, signal_queue: queue.Queue):
+    while True:
+        try:
+            signal = client_socket.recv(100).decode()
+            if signal == constants.STOP_KEYWORD:
+                print(constants.CLIENT_RESPONSE.format(signal))
+                signal_queue.put(signal)
+                return None
+        except socket.timeout as e:
+            print("[+] ERROR: Connection to client has timed out : {}".format(e))
+            break
+        except socket.error as e:
+            print("[+] Socket error: {}".format(e))
+            break
+
+
+def watch_file(client_socket: socket.socket,
+               file_path: str,
+               signal_queue: queue.Queue):
+
     # Create an inotify object
     notifier = inotify.adapters.Inotify()
     print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
@@ -140,9 +146,16 @@ def watch_file(client_socket: socket.socket, file_path: str, signal_queue: queue
     notifier.add_watch(file_path)
 
     try:
-        while signal_queue.empty():  # Keep watching file until signal to stop
+        while True:
             # Wait for events
             for event in notifier.event_gen():
+
+                # Check signal for stop before processing event
+                if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
+                    notifier.remove_watch(file_path)
+                    print("[+] ENDING THREAD: watch_file has stopped!")
+                    return None
+
                 if event is not None:
                     (header, type_names, watch_path, _) = event
 
@@ -151,16 +164,21 @@ def watch_file(client_socket: socket.socket, file_path: str, signal_queue: queue
                         print(constants.WATCH_FILE_MODIFIED.format(watch_path))
                         client_socket.send("IN_MODIFY".encode())
 
+                        # Start file transfer in a separate thread
+                        with open(file_path, 'rb') as file:
+                            while True:
+                                file_data = file.read(1024)
+                                if not file_data:
+                                    break
+                                client_socket.send(file_data)
+
+                        client_socket.send(constants.END_OF_FILE_SIGNAL)
+                        print(constants.WATCH_FILE_TRANSFER_SUCCESS.format(file_path))
+
                     # If Deleted -> Send events to commander that file has been deleted
                     if "IN_DELETE" in type_names or "IN_DELETE_SELF" in type_names:
                         print(constants.WATCH_FILE_DELETED.format(watch_path))
                         client_socket.send("IN_DELETE".encode())
-
-        # When signal given to STOP (break out of while loop) -> Save File (or Save File + Move to Deleted Dir)
-
     # Handle Ctrl+C to exit the loop
     except KeyboardInterrupt:
         pass
-    finally:
-        # Clear from memory
-        notifier.remove_watch(file_path)

