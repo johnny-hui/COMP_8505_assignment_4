@@ -170,9 +170,6 @@ if __name__ == '__main__':
                                     global_thread.join()
                                     print(constants.THREAD_STOPPED_MSG)
 
-                                    # # Set status to False
-                                    # connected_clients[client_socket] = (client_ip, client_port, status, False)
-
                                     # Set global thread to None
                                     global_thread = None
 

