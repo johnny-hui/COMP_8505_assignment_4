@@ -7,7 +7,8 @@
 6 - Transfer a file to a Victim
 7 - Get a file from a Victim
 8 - Run program
-9 - Watch file                          (MUST DO)
+9 - Watch file                          (REMAINING BUGS: Ensure that while watching file,
+                                        commander isnt able to perform other menu options)
 10 - Watch directory                    (MUST DO)
 11 - Stop watching file                 (MUST DO)
 12 - Stop watching directory            (MUST DO)

@@ -7,7 +7,6 @@ import sys
 import constants
 import importlib
 import inotify.adapters
-import shutil
 
 
 def parse_arguments():
@@ -135,7 +134,22 @@ def watch_stop_signal(client_socket: socket.socket,
             return None
 
 
-def create_backup_file(original_filename: str, backup_filename: str, modified_file_dict: dict):
+def __copy_file(source_file_path: str, backup_file_path: str):
+    try:
+        with open(source_file_path, 'rb') as source:
+            with open(backup_file_path, 'wb') as backup:
+                while True:
+                    chunk = source.read(1024)
+                    if not chunk:
+                        break
+                    backup.write(chunk)
+    except Exception as e:
+        print(f"[+] COPY FILE TO BACKUP ERROR: An error occurred: {e}")
+
+
+def create_backup_file(original_filename: str,
+                       backup_filename: str,
+                       modified_file_dict: dict):
     """
     Creates and replaces the current version of a backup file with a new one
     in the victim's current directory.
@@ -151,20 +165,20 @@ def create_backup_file(original_filename: str, backup_filename: str, modified_fi
 
     @return: None
     """
-    # Create an initial backup if doesn't exist
+    # 2) Create an initial backup if it doesn't exist
     if not os.path.exists(backup_filename):
-        shutil.copy2(original_filename, backup_filename)
+        __copy_file(original_filename, backup_filename)
         print(constants.BACKUP_FILE_CREATED_MSG.format(original_filename, backup_filename))
         return None
 
-    # Check if the file is modified
+    # 3) Check if the file is modified
     if modified_file_dict[original_filename]:  # If modified (true)...
-        # a) Check if the destination file exists and remove it
+        # a) Remove old backup
         if os.path.exists(backup_filename):
             os.remove(backup_filename)
 
-        # b) Create copy
-        shutil.copy2(original_filename, backup_filename)
+        # b) Create a new version of backup
+        __copy_file(original_filename, backup_filename)
         print(constants.BACKUP_FILE_CREATED_MSG.format(original_filename, backup_filename))
 
         # c) Remove modification mark
@@ -190,7 +204,7 @@ def watch_file(client_socket: socket.socket,
     print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
 
     # Add the file to watch for modification and delete events
-    notifier.add_watch(file_path)
+    wd = notifier.add_watch(file_path)
 
     # Initialize a modified file dictionary to keep track of modified files
     modified_files_dict = {file_path: False}
@@ -259,6 +273,7 @@ def watch_file(client_socket: socket.socket,
                         # iv) Stop watching file and return to main()
                         print("[+] WATCH FILE END: Watch file for {} has ended".format(watch_path))
                         return None
+
     # Handle Ctrl+C to exit the loop
     except KeyboardInterrupt:
         pass
