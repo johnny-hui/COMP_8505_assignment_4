@@ -153,7 +153,6 @@ TRANSFER_SUCCESS_MSG = "[+] FILE TRANSFER SUCCESSFUL: {} has been transferred su
 ENTER_TARGET_IP_GET_FILES = "[+] Enter the target (victim) IP address to receive recorded keylog files from: "
 ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive recorded keylog files from: "
 
-
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"
 WATCH_FILE_NO_CLIENTS_ERROR = "[+] WATCH_FILE_ERROR: The command server is not connected to any clients!"
@@ -162,17 +161,16 @@ WATCH_FILE_TRANSFER_SUCCESS_MODIFY = ("[+] FILE TRANSFER SUCCESSFUL: {} has been
                                       "[due to modification]")
 WATCH_FILE_TRANSFER_SUCCESS_DELETION = ("[+] FILE TRANSFER SUCCESSFUL: {} has been transferred successfully "
                                         "[due to deletion]")
-WATCH_FILE_STATUS_TRUE_ERROR = ("[+] WATCH_FILE_ERROR: This specific client (IP: {}, Port: {}) "
-                                "is already watching a file!")
-WATCH_FILE_STATUS_TRUE_ERROR_SUGGEST = "[+] TIP: Stop watching a file for this specific client using menu item 11"
+WATCH_STATUS_TRUE_ERROR = ("[+] WATCH_ERROR: This specific client (IP: {}, Port: {}) "
+                           "is already currently watching a file or a directory!")
+WATCH_STATUS_TRUE_ERROR_SUGGEST = ("[+] TIP: To stop watching a file or directory for this specific client use menu "
+                                   "item 11 or 12")
 NOT_WATCHING_FILE_ERROR = "[+] STOP WATCH FILE ERROR: You are not currently watching a file!"
 DELETED_DIRECTORY = "deleted"
 WATCH_FILE_DELETE_DETECTED_MSG = ("[+] WATCH FILE DELETE EVENT DETECTED: The watch file '{}' has been deleted on "
                                   "client/victim ({}, {})")
 WATCH_FILE_THREAD_TERMINATING = ("[+] THREAD TERMINATION: Now terminating the following thread: "
                                  "Watch_File_Client_Socket Thread...")
-
-
 
 # MENU ITEM 11 - Stop Watching File
 STOP_WATCH_FILE_MSG = "[+] [MENU ITEM 11] - Now Stopping Watch File"
@@ -186,10 +184,8 @@ STOP_WATCH_THREAD_CONCURRENCY_WARNING = ("[+] WARNING: You are not allowed to pe
 WATCH_FILE_THREAD_STOP = "[+] ENDING THREAD: WATCH_FILE_THREAD has terminated!"
 WATCH_FILE_THREAD_STOP_SUCCESS = "[+] WATCH FILE SUCCESSFUL: You have stopped watching the file..."
 
-
 # MENU ITEM 12 - Connect to a specific victim
 INVALID_INPUT_ERROR = "[+] ERROR: Invalid format for either IP address or port number was provided : {}"
-
 
 # DESTINATION IP/PORT Constants
 NO_ARG_ERROR = "[+] NO_ARG_ERROR: No arguments were passed in!"

