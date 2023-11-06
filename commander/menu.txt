@@ -4,8 +4,8 @@
 3 - Transfer Keylog Program to Victim   (DONE)
 4 - Get Keylog File from Victim         (DONE)
 5 - Disconnect from Victim              (DONE)
-6 - Transfer a file to a Victim
-7 - Get a file from a Victim
+6 - Transfer a file to a Victim         (ASSIGNMENT 4)
+7 - Get a file from a Victim            (ASSIGNMENT 4)
 8 - Run program
 9 - Watch file                          (REMAINING BUGS: Watch file within sub-directory)
 10 - Watch directory                    (MUST DO)

