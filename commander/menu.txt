@@ -7,10 +7,9 @@
 6 - Transfer a file to a Victim
 7 - Get a file from a Victim
 8 - Run program
-9 - Watch file                          (REMAINING BUGS: Ensure that while watching file,
-                                        commander isnt able to perform other menu options)
+9 - Watch file                          (REMAINING BUGS: Watch file within sub-directory)
 10 - Watch directory                    (MUST DO)
-11 - Stop watching file                 (MUST DO)
+11 - Stop watching file                 (REMAINING BUGS: Watch file within sub-directory)
 12 - Stop watching directory            (MUST DO)
 13 - Get List of All Connected Victim(s)
 14 - Connect to a Specific Victim       (BUG: If a client is running a keylogger, and you try to connect, fix)

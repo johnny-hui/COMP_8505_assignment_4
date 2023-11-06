@@ -204,7 +204,7 @@ def watch_file(client_socket: socket.socket,
     print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
 
     # Add the file to watch for modification and delete events
-    wd = notifier.add_watch(file_path)
+    notifier.add_watch(file_path)
 
     # Initialize a modified file dictionary to keep track of modified files
     modified_files_dict = {file_path: False}
