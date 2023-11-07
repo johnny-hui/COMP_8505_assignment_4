@@ -274,7 +274,72 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str, dest_port: int):
             print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
 
 
-def transfer_file(sock: socket.socket, dest_ip: str, dest_port: int):
+def protocol_and_field_selector():
+    """
+    Prompts user of the protocol layer within a network packet
+    to hide data in.
+
+    Users can select the following choices:
+        - IPv4, IPv6, TCP, UDP, and ICMP
+        - Users then select a field
+
+    @return: selection
+        A dictionary representing the protocol and header field of choice
+    """
+    # a) Initialize Variables
+    index = constants.ZERO
+    choices = {}
+    __print_protocol_choices()
+
+    # b) Get protocol of choice
+    while index <= constants.ZERO or index >= constants.MAX_PROTOCOL_CHOICE:
+        try:
+            index = int(input(constants.PROTOCOL_CHOICE_PROMPT))
+        except ValueError as e:
+            print(constants.INVALID_PROTOCOL_ERROR_MSG.format(e))
+
+    # c) Print and Initialize for Header Choice
+    protocol = constants.PROTOCOLS_LIST[index - 1]
+    num_of_fields = len(constants.PROTOCOL_HEADER_FIELD_MAP[protocol])
+    index = constants.ZERO  # => Reset index
+    __print_header_choices(constants.PROTOCOL_HEADER_FIELD_MAP[protocol])
+
+    # d) Get header field of choice
+    while index <= constants.ZERO or index > num_of_fields:
+        try:
+            index = int(input(constants.HEADER_CHOICE_PROMPT.format(num_of_fields)))
+        except ValueError as e:
+            print(constants.INVALID_HEADER_ERROR_MSG.format(e))
+
+    # e) Put Protocol and Header Field into Dictionary
+    header_field = constants.PROTOCOL_HEADER_FIELD_MAP[protocol][index - 1]
+    choices[protocol] = header_field
+    print(constants.PROTOCOL_SELECTED_MSG.format(protocol))
+    print(constants.FIELD_SELECTED_MSG.format(header_field))
+    return choices
+
+
+def __print_protocol_choices():
+    print("[+] Please select a protocol for covert file transfer...")
+    print("1 - IPv4")
+    print("2 - IPv6")
+    print("3 - TCP")
+    print("4 - UDP")
+    print("5 - ICMP")
+    print(constants.MENU_CLOSING_BANNER)
+
+
+def __print_header_choices(protocol_header_list: list):
+    count = 1
+
+    print("[+] Please select a header field for covert file transfer...")
+    for choice in protocol_header_list:
+        print("{} - {}".format(count, choice))
+        count += 1
+    print(constants.MENU_CLOSING_BANNER)
+
+
+def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: dict):
     # Get User Input for File + Check if Exists
     file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
 
@@ -1162,3 +1227,7 @@ def perform_menu_item_11(client_list: dict,
     # Print closing statements
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
+
+
+if __name__ == '__main__':
+    protocol_and_field_selector()

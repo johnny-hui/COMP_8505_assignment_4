@@ -165,7 +165,6 @@ FILE_TRANSFER_KEYLOG_ERROR = ("[+] FILE TRANSFER ERROR: Cannot transfer file to 
 TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT = "[+] Enter the target (victim) IP address to transfer file to: "
 TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT = "[+] Enter the target (victim) port to transfer file to: "
 
-
 # MENU ITEM 7 - Get File from Victim
 GET_FILE_SIGNAL = "GET FILE"
 GET_FILE_SIGNAL_MSG = ("[+] GET FILE: Sending signal to client/victim to "
@@ -175,6 +174,30 @@ GET_FILE_EXIST = "EXIST"
 FILE_END_OF_FILE_SIGNAL = b"EOF"
 GET_FILE_ERROR = "[+] RECEIVE FILE ERROR: An error has occurred during file transfer!"
 GET_FILE_NOT_EXIST_MSG = "[+] GET FILE ERROR: The following file path {} does not exist in the client ({}, {})"
+PROTOCOLS_LIST = ["IPv4", "IPv6", "TCP", "UDP", "ICMP"]
+MAX_PROTOCOL_CHOICE = 6
+PROTOCOL_HEADER_FIELD_MAP = {
+    "IPv4": ["Version", "IHL (Internet Header Length)", "TOS (Type of Service)",
+             "Total Length", "Identification", "Flags", "Fragment Offset", "TTL (Time to Live)",
+             "Protocol", "Header Checksum", "Source Address", "Destination Address", "Options", "Padding"],
+
+    "IPv6": ["Version", "Traffic Class", "Flow Label", "Payload Length", "Next Header", "Hop Limit",
+             "Source Address", "Destination Address"],
+
+    "TCP": ["Source Port", "Destination Port", "Sequence Number", "Acknowledgement Number", "Header Length",
+            "Reserved", "Flags", "Window Size", "Urgent Pointer", "Options"],
+
+    "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
+
+    "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Rest of the Header (Data)"]
+}
+PROTOCOL_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - 5: \n"
+HEADER_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - {}: \n"
+INVALID_PROTOCOL_ERROR_MSG = "[+] INVALID PROTOCOL FORMAT: {}"
+INVALID_HEADER_ERROR_MSG = "[+] INVALID HEADER FIELD FORMAT: {}"
+PROTOCOL_SELECTED_MSG = "[+] PROTOCOL SELECTED: {}"
+FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
+
 
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"
