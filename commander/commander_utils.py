@@ -278,7 +278,7 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str, dest_port: int):
 
 def protocol_and_field_selector():
     """
-    Prompts user of the protocol layer within a network packet
+    Prompts user of the header layer within a network packet
     to hide data in.
 
     Users can select the following choices:
@@ -286,25 +286,24 @@ def protocol_and_field_selector():
         - Users then select a field
 
     @return: choices
-        A dictionary representing the protocol and header field of choice
+        A tuple representing the header and header field chosen
     """
     # a) Initialize Variables
     index = constants.ZERO
-    choices = {}
     __print_protocol_choices()
 
-    # b) Get protocol of choice
+    # b) Get header of choice
     while index <= constants.ZERO or index >= constants.MAX_PROTOCOL_CHOICE:
         try:
             index = int(input(constants.PROTOCOL_CHOICE_PROMPT))
         except ValueError as e:
             print(constants.INVALID_PROTOCOL_ERROR_MSG.format(e))
 
-    # c) Print and Initialize for Header Choice
-    protocol = constants.PROTOCOLS_LIST[index - 1]
-    num_of_fields = len(constants.PROTOCOL_HEADER_FIELD_MAP[protocol])
+    # c) Print and Initialize Header
+    header = constants.PROTOCOLS_LIST[index - 1]
+    num_of_fields = len(constants.PROTOCOL_HEADER_FIELD_MAP[header])
     index = constants.ZERO  # => Reset index
-    __print_header_choices(constants.PROTOCOL_HEADER_FIELD_MAP[protocol])
+    __print_header_choices(constants.PROTOCOL_HEADER_FIELD_MAP[header])
 
     # d) Get header field of choice
     while index <= constants.ZERO or index > num_of_fields:
@@ -313,10 +312,12 @@ def protocol_and_field_selector():
         except ValueError as e:
             print(constants.INVALID_HEADER_ERROR_MSG.format(e))
 
-    # e) Put Protocol and Header Field into Dictionary
-    header_field = constants.PROTOCOL_HEADER_FIELD_MAP[protocol][index - 1]
-    choices[protocol] = header_field
-    print(constants.PROTOCOL_SELECTED_MSG.format(protocol))
+    # e) Put Protocol and Header Field into Tuple
+    header_field = constants.PROTOCOL_HEADER_FIELD_MAP[header][index - 1]
+    choices = (header, header_field)
+
+    # f) Print resulting operations
+    print(constants.PROTOCOL_SELECTED_MSG.format(header))
     print(constants.FIELD_SELECTED_MSG.format(header_field))
     return choices
 
@@ -380,24 +381,24 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
 def __get_protocol_header_function_map():
     return {  # A dictionary of [Header, Field] => Function
         # a) IPv4 Handlers
-        {"IPv4": "Version"}: "F()",
-        {"IPv4": "IHL (Internet Header Length)"}: "F()",
-        {"IPv4": "TOS (Type of Service)"}: "F()",
-        {"IPv4": "Total Length"}: "F()",
-        {"IPv4": "Identification"}: "F()",
-        {"IPv4": "Flags"}: "F()",
-        {"IPv4": "Fragment Offset"}: "F()",
-        {"IPv4": "TTL (Time to Live)"}: transfer_file_ipv4_ttl,
-        {"IPv4": "Protocol"}: "F()",
-        {"IPv4": "Header Checksum"}: "F()",
-        {"IPv4": "Source Address"}: "F()",
-        {"IPv4": "Destination Address"}: "F()",
-        {"IPv4": "Options"}: "F()",
-        {"IPv4": "Padding"}: "F()",
+        ("IPv4", "Version"): "F()",
+        ("IPv4", "IHL (Internet Header Length)"): "F()",
+        ("IPv4", "TOS (Type of Service)"): "F()",
+        ("IPv4", "Total Length"): "F()",
+        ("IPv4", "Identification"): "F()",
+        ("IPv4", "Flags"): "F()",
+        ("IPv4", "Fragment Offset"): "F()",
+        ("IPv4", "TTL (Time to Live)"): transfer_file_ipv4_ttl,
+        ("IPv4", "Protocol"): "F()",
+        ("IPv4", "Header Checksum"): "F()",
+        ("IPv4", "Source Address"): "F()",
+        ("IPv4", "Destination Address"): "F()",
+        ("IPv4", "Options"): "F()",
+        ("IPv4", "Padding"): "F()",
     }
 
 
-def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: dict):
+def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: tuple):
     # Initialize map
     header_field_function_map = __get_protocol_header_function_map()
 
