@@ -283,7 +283,7 @@ def watch_file(client_socket: socket.socket,
         pass
 
 
-def bin_to_text(binary_data):
+def __bin_to_text(binary_data):
     """
     Converts binary data to plain-text (ASCII) characters.
 
@@ -295,15 +295,14 @@ def bin_to_text(binary_data):
         A string containing plain-text characters
     """
     # a) Iterate over binary data
-    text = ''
-    for i in range(0, len(binary_data), 8):
-        byte = binary_data[i:i + 8]
-        if byte != '00000000':  # Ensure not to append null bytes
-            text += chr(int(byte, 2))
+    return ''.join(chr(int(binary_data[i:i + 8], 2)) for i in range(0, len(binary_data), 8))
 
-    # b) Filter out non-printable characters
-    text = ''.join(filter(lambda x: x in string.printable, text))
-    return text
+
+def covert_data_write_to_file(covert_data: str, filename: str):
+    if covert_data:
+        text_data = __bin_to_text(covert_data)
+        with open(filename, constants.APPEND_MODE) as f:
+            f.write(text_data)
 
 
 def get_protocol_header_function_map():

