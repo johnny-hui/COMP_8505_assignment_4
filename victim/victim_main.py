@@ -270,6 +270,7 @@ if __name__ == '__main__':
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
 
 
+
                 # f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:
                     print(constants.CLIENT_RESPONSE.format(constants.GET_FILE_SIGNAL))

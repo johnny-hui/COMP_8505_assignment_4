@@ -20,7 +20,8 @@ SUCCESS_SOCKET_CREATE_MSG = "[+] SOCKET CREATED: Server has been created!"
 SOCKET_INFO_MSG = "[+] Server is now listening on (IP: {}, Port: {})"
 READ_MODE = "r"
 KEYLOG_FILE_NAME = "keylogger.py"
-BINARY_MODE = "08b"
+EIGHT_BIT = "08b"
+FOUR_BIT = "04b"
 APPEND_MODE = "a"
 
 

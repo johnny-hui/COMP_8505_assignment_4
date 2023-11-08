@@ -294,9 +294,8 @@ def bin_to_text(binary_data):
     @return text:
         A string containing plain-text characters
     """
-    text = ''
-
     # a) Iterate over binary data
+    text = ''
     for i in range(0, len(binary_data), 8):
         byte = binary_data[i:i + 8]
         if byte != '00000000':  # Ensure not to append null bytes
@@ -310,7 +309,7 @@ def bin_to_text(binary_data):
 def get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
-        ("IPv4", "Version"): "F()",
+        ("IPv4", "Version"): extract_data_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): "F()",
         ("IPv4", "TOS (Type of Service)"): "F()",
         ("IPv4", "Total Length"): "F()",
@@ -342,5 +341,12 @@ def extract_data_ipv4_ttl(packet):
     """
     if packet.haslayer('IP'):
         ttl = packet[IP].ttl
-        binary_data = format(ttl, constants.BINARY_MODE)  # Adjust to 8 bits for each character
+        binary_data = format(ttl, constants.EIGHT_BIT)  # Adjust to 8 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_version(packet):
+    if packet.haslayer('IP'):
+        version = packet[IP].version
+        binary_data = format(version, constants.FOUR_BIT)  # Adjust to 4 bits for each character
         return binary_data

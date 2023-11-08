@@ -6,8 +6,8 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP, ICMP
-from scapy.sendrecv import send, sniff
+from scapy.layers.inet import IP
+from scapy.sendrecv import send
 import constants
 import ipaddress
 from typing import TextIO
@@ -346,12 +346,8 @@ def __text_to_bin(text):
     return ''.join(format(ord(char), constants.BINARY_MODE) for char in text)
 
 
-def __bin_to_text(binary):
-    return ''.join(chr(int(binary[i:i + 8], 2)) for i in range(0, len(binary), 8))
-
-
 def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
-    # a) Read the content of the file to hide in TTL
+    # a) Read the content of the file
     with open(file_path, constants.READ_MODE) as file:
         file_content = file.read()
 
@@ -362,7 +358,7 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
     ttl_chunk_size = 8  # MAX SIZE is 8 bits == (1 char)
     chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
 
-    # d) Send total number of packets to client
+    # d) Send total number of packets to the client
     total_packets = str(len(chunks) + 1)
     client_sock.send(total_packets.encode())
 
@@ -378,10 +374,36 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
         send(packet, verbose=0)
 
 
+def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_path: str):
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in a packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        version = int(binary_segment, 2)
+        packet = IP(dst=dest_ip)
+        packet.version = version
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets) + 1)
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
-        ("IPv4", "Version"): "F()",
+        ("IPv4", "Version"): transfer_file_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): "F()",
         ("IPv4", "TOS (Type of Service)"): "F()",
         ("IPv4", "Total Length"): "F()",
