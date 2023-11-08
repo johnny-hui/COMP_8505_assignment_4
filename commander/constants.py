@@ -1,5 +1,3 @@
-from commander_utils import *
-
 ZERO = 0
 MIN_PORT_RANGE = 0
 MAX_PORT_RANGE = 65536
@@ -193,23 +191,6 @@ PROTOCOL_HEADER_FIELD_MAP = {
     "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
 
     "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Rest of the Header (Data)"]
-}
-PROTOCOL_HEADER_FUNCTION_MAP = {
-    # a) IPv4 Handlers
-    {"IPv4": "Version"}: "F()",
-    {"IPv4": "IHL (Internet Header Length)"}: "F()",
-    {"IPv4": "TOS (Type of Service)"}: "F()",
-    {"IPv4": "Total Length"}: "F()",
-    {"IPv4": "Identification"}: "F()",
-    {"IPv4": "Flags"}: "F()",
-    {"IPv4": "Fragment Offset"}: "F()",
-    {"IPv4": "TTL (Time to Live)"}: transfer_file_ipv4_ttl,
-    {"IPv4": "Protocol"}: "F()",
-    {"IPv4": "Header Checksum"}: "F()",
-    {"IPv4": "Source Address"}: "F()",
-    {"IPv4": "Destination Address"}: "F()",
-    {"IPv4": "Options"}: "F()",
-    {"IPv4": "Padding"}: "F()",
 }
 PROTOCOL_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - 5: \n"
 HEADER_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - {}: \n"

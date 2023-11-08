@@ -6,10 +6,8 @@ import sys
 import socket
 import threading
 import time
-
 from scapy.layers.inet import IP, ICMP
 from scapy.sendrecv import send, sniff
-
 import constants
 import ipaddress
 from typing import TextIO
@@ -379,7 +377,30 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
         send(packet, verbose=0)
 
 
+def __get_protocol_header_function_map():
+    return {  # A dictionary of [Header, Field] => Function
+        # a) IPv4 Handlers
+        {"IPv4": "Version"}: "F()",
+        {"IPv4": "IHL (Internet Header Length)"}: "F()",
+        {"IPv4": "TOS (Type of Service)"}: "F()",
+        {"IPv4": "Total Length"}: "F()",
+        {"IPv4": "Identification"}: "F()",
+        {"IPv4": "Flags"}: "F()",
+        {"IPv4": "Fragment Offset"}: "F()",
+        {"IPv4": "TTL (Time to Live)"}: transfer_file_ipv4_ttl,
+        {"IPv4": "Protocol"}: "F()",
+        {"IPv4": "Header Checksum"}: "F()",
+        {"IPv4": "Source Address"}: "F()",
+        {"IPv4": "Destination Address"}: "F()",
+        {"IPv4": "Options"}: "F()",
+        {"IPv4": "Padding"}: "F()",
+    }
+
+
 def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: dict):
+    # Initialize map
+    header_field_function_map = __get_protocol_header_function_map()
+
     # Get User Input for File + Check if Exists
     file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
 
@@ -402,14 +423,14 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
             # Use Dictionary to map (protocol/header) to a transfer_file_handler()
-            if choices in constants.PROTOCOL_HEADER_FUNCTION_MAP:
-                function_handler = constants.PROTOCOL_HEADER_FUNCTION_MAP.get(choices)
+            if choices in header_field_function_map:
+                function_handler = header_field_function_map.get(choices)
                 function_handler(sock, dest_ip, file_path)
             else:
                 print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
                 return None
 
-            # # Get an ACK from victim for success
+            # Get an ACK from the victim for success
             transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
 
             if transfer_result == constants.VICTIM_ACK:
