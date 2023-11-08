@@ -352,7 +352,7 @@ def __bin_to_text(binary):
 
 def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
     # a) Read the content of the file to hide in TTL
-    with open(file_path, 'r') as file:
+    with open(file_path, constants.READ_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
@@ -379,7 +379,7 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
 
 
 def __get_protocol_header_function_map():
-    return {  # A dictionary of [Header, Field] => Function
+    return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): "F()",
         ("IPv4", "IHL (Internet Header Length)"): "F()",
@@ -395,6 +395,8 @@ def __get_protocol_header_function_map():
         ("IPv4", "Destination Address"): "F()",
         ("IPv4", "Options"): "F()",
         ("IPv4", "Padding"): "F()",
+
+        # b) IPv6 Handlers
     }
 
 
@@ -420,7 +422,8 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
 
         # Open and Read the file to be sent
         if ack == constants.RECEIVED_CONFIRMATION_MSG:
-            sock.send(file_name.encode())
+            # Send file name and choices
+            sock.send((file_name + "/" + choices[0] + "/" + choices[1]).encode())
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
             # Find the choice(header/field) in map, get and call the mapped function

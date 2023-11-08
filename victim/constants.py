@@ -21,6 +21,8 @@ SOCKET_INFO_MSG = "[+] Server is now listening on (IP: {}, Port: {})"
 READ_MODE = "r"
 KEYLOG_FILE_NAME = "keylogger.py"
 BINARY_MODE = "08b"
+APPEND_MODE = "a"
+
 
 OPENING_BANNER = "===================================== || VICTIM PROGRAM || ====================================="
 MENU_CLOSING_BANNER = ("==================================================================================="
@@ -87,6 +89,10 @@ BACKUP_FILE_CREATED_MSG = ("[+] BACKUP FILE CREATED: A backup of '{}' has been c
 
 # Receive File from Commander
 TRANSFER_FILE_SIGNAL = "TRANSFER"
+CLIENT_TOTAL_PACKET_COUNT_MSG = "Total Number of Packets: {}"
+COVERT_CONFIGURATION_FROM_CMDR = "[+] Covert Channel Configuration Chosen: {} -> {}"
+COVERT_DATA_PACKET_LOCATION_MSG = "[+] Data Hidden in Packet (Header: {}, Field: {})"
+CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
 
 # Transfer File to Commander
 GET_FILE_SIGNAL = "GET FILE"

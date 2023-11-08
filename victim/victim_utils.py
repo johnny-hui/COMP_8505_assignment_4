@@ -3,7 +3,11 @@ import ipaddress
 import os
 import queue
 import socket
+import string
 import sys
+
+from scapy.layers.inet import IP
+
 import constants
 import importlib
 import inotify.adapters
@@ -277,3 +281,66 @@ def watch_file(client_socket: socket.socket,
     # Handle Ctrl+C to exit the loop
     except KeyboardInterrupt:
         pass
+
+
+def bin_to_text(binary_data):
+    """
+    Converts binary data to plain-text (ASCII) characters.
+
+    @param binary_data:
+        A string containing binary data extracted from a specific
+        header and field
+
+    @return text:
+        A string containing plain-text characters
+    """
+    text = ''
+
+    # a) Iterate over binary data
+    for i in range(0, len(binary_data), 8):
+        byte = binary_data[i:i + 8]
+        if byte != '00000000':  # Ensure not to append null bytes
+            text += chr(int(byte, 2))
+
+    # b) Filter out non-printable characters
+    text = ''.join(filter(lambda x: x in string.printable, text))
+    return text
+
+
+def get_protocol_header_function_map():
+    return {  # A tuple of [Header, Field] => Function
+        # a) IPv4 Handlers
+        ("IPv4", "Version"): "F()",
+        ("IPv4", "IHL (Internet Header Length)"): "F()",
+        ("IPv4", "TOS (Type of Service)"): "F()",
+        ("IPv4", "Total Length"): "F()",
+        ("IPv4", "Identification"): "F()",
+        ("IPv4", "Flags"): "F()",
+        ("IPv4", "Fragment Offset"): "F()",
+        ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
+        ("IPv4", "Protocol"): "F()",
+        ("IPv4", "Header Checksum"): "F()",
+        ("IPv4", "Source Address"): "F()",
+        ("IPv4", "Destination Address"): "F()",
+        ("IPv4", "Options"): "F()",
+        ("IPv4", "Padding"): "F()",
+
+        # b) IPv6 Handlers
+    }
+
+
+def extract_data_ipv4_ttl(packet):
+    """
+    A handler function to extract data from packets with ipv4
+    header and a modified ttl field.
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from ttl field
+    """
+    if packet.haslayer('IP'):
+        ttl = packet[IP].ttl
+        binary_data = format(ttl, constants.BINARY_MODE)  # Adjust to 8 bits for each character
+        return binary_data

