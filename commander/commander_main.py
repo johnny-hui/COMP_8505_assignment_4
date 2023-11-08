@@ -107,7 +107,8 @@ if __name__ == '__main__':
                             pass
                             # return None
                         elif target_socket:
-                            transfer_file_covert(target_socket, target_ip, target_port)
+                            choices = protocol_and_field_selector()
+                            transfer_file_covert(target_socket, target_ip, target_port, choices)
                         else:
                             print(constants.TARGET_VICTIM_NOT_FOUND)
                             print(constants.RETURN_MAIN_MENU_MSG)

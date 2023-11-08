@@ -271,7 +271,7 @@ def watch_file(client_socket: socket.socket,
                         remove_file(backup_file_name)
 
                         # iv) Stop watching file and return to main()
-                        print("[+] WATCH FILE END: Watch file for {} has ended".format(watch_path))
+                        print(constants.WATCH_FILE_DELETE_EVENT_END_MSG.format(watch_path))
                         return None
 
     # Handle Ctrl+C to exit the loop

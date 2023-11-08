@@ -1,3 +1,5 @@
+from commander_utils import *
+
 ZERO = 0
 MIN_PORT_RANGE = 0
 MAX_PORT_RANGE = 65536
@@ -63,6 +65,7 @@ MENU_ACTION_START_MSG = "\n[+] ACTION SELECTED: Now performing menu item {}:"
 RETURN_MAIN_MENU_MSG = "[+] Now returning to main menu..."
 DOWNLOADS_DIR = "downloads"
 INVALID_MENU_SELECTION = "[+] MENU SELECTION: Please enter a valid menu option (0 to 15)..."
+BINARY_MODE = "08b"
 
 # GENERAL CONSTANTS
 CLIENT_LIST_EMPTY_ERROR = ("[+] ERROR: The command server is not connected to any clients! (TIP: Consider using "
@@ -191,12 +194,31 @@ PROTOCOL_HEADER_FIELD_MAP = {
 
     "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Rest of the Header (Data)"]
 }
+PROTOCOL_HEADER_FUNCTION_MAP = {
+    # a) IPv4 Handlers
+    {"IPv4": "Version"}: "F()",
+    {"IPv4": "IHL (Internet Header Length)"}: "F()",
+    {"IPv4": "TOS (Type of Service)"}: "F()",
+    {"IPv4": "Total Length"}: "F()",
+    {"IPv4": "Identification"}: "F()",
+    {"IPv4": "Flags"}: "F()",
+    {"IPv4": "Fragment Offset"}: "F()",
+    {"IPv4": "TTL (Time to Live)"}: transfer_file_ipv4_ttl,
+    {"IPv4": "Protocol"}: "F()",
+    {"IPv4": "Header Checksum"}: "F()",
+    {"IPv4": "Source Address"}: "F()",
+    {"IPv4": "Destination Address"}: "F()",
+    {"IPv4": "Options"}: "F()",
+    {"IPv4": "Padding"}: "F()",
+}
 PROTOCOL_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - 5: \n"
 HEADER_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - {}: \n"
 INVALID_PROTOCOL_ERROR_MSG = "[+] INVALID PROTOCOL FORMAT: {}"
 INVALID_HEADER_ERROR_MSG = "[+] INVALID HEADER FIELD FORMAT: {}"
 PROTOCOL_SELECTED_MSG = "[+] PROTOCOL SELECTED: {}"
 FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
+CHOICES_NOT_FOUND_IN_MAP_ERROR = ("[+] TRANSFER FILE ERROR: The choices chosen are not defined and not present in "
+                                  "function mapping!")
 
 
 # MENU ITEM 9 - Watch File

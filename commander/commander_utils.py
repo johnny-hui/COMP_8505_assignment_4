@@ -287,7 +287,7 @@ def protocol_and_field_selector():
         - IPv4, IPv6, TCP, UDP, and ICMP
         - Users then select a field
 
-    @return: selection
+    @return: choices
         A dictionary representing the protocol and header field of choice
     """
     # a) Initialize Variables
@@ -320,7 +320,6 @@ def protocol_and_field_selector():
     choices[protocol] = header_field
     print(constants.PROTOCOL_SELECTED_MSG.format(protocol))
     print(constants.FIELD_SELECTED_MSG.format(header_field))
-
     return choices
 
 
@@ -344,13 +343,11 @@ def __print_header_choices(protocol_header_list: list):
     print(constants.MENU_CLOSING_BANNER)
 
 
-# Function to convert a string to binary
-def text_to_bin(text):
-    return ''.join(format(ord(char), '08b') for char in text)
+def __text_to_bin(text):
+    return ''.join(format(ord(char), constants.BINARY_MODE) for char in text)
 
 
-# Function to convert binary to a string
-def bin_to_text(binary):
+def __bin_to_text(binary):
     return ''.join(chr(int(binary[i:i + 8], 2)) for i in range(0, len(binary), 8))
 
 
@@ -360,14 +357,14 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = text_to_bin(file_content)
+    binary_data = __text_to_bin(file_content)
 
     # c) Split the binary data into chunks that fit within the TTL range (0-255)
-    ttl_chunk_size = 8
+    ttl_chunk_size = 8  # MAX SIZE is 8 bits == (1 char)
     chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
 
     # d) Send total number of packets to client
-    total_packets = str(len(chunks))
+    total_packets = str(len(chunks) + 1)
     client_sock.send(total_packets.encode())
 
     # e) Craft packets for each chunk and embed them with a corresponding TTL value
@@ -383,15 +380,6 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
 
 
 def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: dict):
-    # Initialize Variables
-    protocol_header = None
-    field = None
-
-    # Get User Choice from Dict
-    for key, value in choices.items():
-        protocol_header = key
-        field = value
-
     # Get User Input for File + Check if Exists
     file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
 
@@ -413,8 +401,13 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             sock.send(file_name.encode())
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
-            # Transfer File
-            transfer_file_ipv4_ttl(sock, dest_ip, file_path)
+            # Use Dictionary to map (protocol/header) to a transfer_file_handler()
+            if choices in constants.PROTOCOL_HEADER_FUNCTION_MAP:
+                function_handler = constants.PROTOCOL_HEADER_FUNCTION_MAP.get(choices)
+                function_handler(sock, dest_ip, file_path)
+            else:
+                print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
+                return None
 
             # # Get an ACK from victim for success
             transfer_result = sock.recv(constants.BYTE_LIMIT).decode()

