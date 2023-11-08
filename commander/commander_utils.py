@@ -347,6 +347,21 @@ def __text_to_bin(text):
 
 
 def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    TTL field.
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
     # a) Read the content of the file
     with open(file_path, constants.READ_MODE) as file:
         file_content = file.read()
@@ -375,6 +390,26 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
 
 
 def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    version field.
+
+    @attention: // MAY CAUSE ISSUES WHEN RECOVERING DATA //
+        Changing the version field of the IP header may cause
+        packets to be dropped; thus may not be a viable solution
+        for covert data hiding
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
     # a) Read the content of the file
     with open(file_path, constants.READ_MODE) as file:
         file_content = file.read()
@@ -387,8 +422,7 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
     for i in range(0, len(binary_data), 4):
         binary_segment = binary_data[i:i + 4].ljust(4, '0')
         version = int(binary_segment, 2)
-        packet = IP(dst=dest_ip)
-        packet.version = version
+        packet = IP(dst=dest_ip, version=version)
         packets.append(packet)
 
     # d) Send total number of packets to the client

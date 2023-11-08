@@ -330,8 +330,11 @@ def get_protocol_header_function_map():
 
 def extract_data_ipv4_ttl(packet):
     """
-    A handler function to extract data from packets with ipv4
+    A handler function to extract data from packets with IPv4
     header and a modified ttl field.
+
+    @note Bit length
+        The version field for IPv4 headers is 8 bits maximum
 
     @param packet:
         The received packet
@@ -346,6 +349,19 @@ def extract_data_ipv4_ttl(packet):
 
 
 def extract_data_ipv4_version(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified version field.
+
+    @note Bit length
+        The version field for IPv4 headers is 4 bits maximum
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from ttl field
+    """
     if packet.haslayer('IP'):
         version = packet[IP].version
         binary_data = format(version, constants.FOUR_BIT)  # Adjust to 4 bits for each character
