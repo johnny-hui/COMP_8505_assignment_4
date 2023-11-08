@@ -200,6 +200,7 @@ PROTOCOL_SELECTED_MSG = "[+] PROTOCOL SELECTED: {}"
 FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
 CHOICES_NOT_FOUND_IN_MAP_ERROR = ("[+] TRANSFER FILE ERROR: The choices chosen are not defined and not present in "
                                   "function mapping!")
+CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
 
 
 # MENU ITEM 9 - Watch File

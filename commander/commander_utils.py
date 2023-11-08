@@ -423,10 +423,15 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             sock.send(file_name.encode())
             print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
 
-            # Use Dictionary to map (protocol/header) to a transfer_file_handler()
+            # Find the choice(header/field) in map, get and call the mapped function
             if choices in header_field_function_map:
-                function_handler = header_field_function_map.get(choices)
-                function_handler(sock, dest_ip, file_path)
+                selected_function = header_field_function_map.get(choices)
+
+                if selected_function is not None and callable(selected_function):
+                    selected_function(sock, dest_ip, file_path)
+                else:
+                    print(constants.CALL_MAP_FUNCTION_ERROR)
+                    return None
             else:
                 print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
                 return None
