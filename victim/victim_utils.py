@@ -5,13 +5,10 @@ import queue
 import socket
 import string
 import sys
-
-from scapy.layers.inet import IP
-
 import constants
 import importlib
 import inotify.adapters
-
+from scapy.layers.inet import IP
 
 def parse_arguments():
     # Initialization

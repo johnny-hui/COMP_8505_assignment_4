@@ -403,11 +403,6 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
     Hides file data covertly in IPv4 headers using the
     version field.
 
-    @attention: // MAY CAUSE ISSUES DURING TRANSMISSION //
-        Changing the version field of the IP header may cause
-        packets to be dropped; thus may not be a viable solution
-        for covert data hiding
-
     @note Bit length
         The version field for IPv4 headers is 4 bits
 
@@ -920,6 +915,14 @@ def transfer_file_ipv4_dst_addr(client_sock: socket.socket, dest_ip: str, file_p
     """
     Hides file data covertly in IPv4 headers using the
     destination address field.
+
+    @attention: // *** THIS IS DESTINATION IP SPOOFING *** //
+                Changing the destination IP field of the IP header will
+                cause the packets created to be sent out to random IP
+                addresses.
+
+                The target victim will not be able to receive any
+                crafted packets; hence - any covert data.
 
     @note Bit length
         The destination address field for IPv4 headers is 32 bits (4 bytes)
@@ -1879,7 +1882,3 @@ def perform_menu_item_11(client_list: dict,
     # Print closing statements
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
-
-
-if __name__ == '__main__':
-    protocol_and_field_selector()
