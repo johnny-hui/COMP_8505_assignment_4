@@ -380,7 +380,7 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
     chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
 
     # d) Send total number of packets to the client
-    total_packets = str(len(chunks) + 1)
+    total_packets = str(len(chunks))
     client_sock.send(total_packets.encode())
 
     # e) Craft packets for each chunk and embed them with a corresponding TTL value
@@ -435,7 +435,7 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -483,7 +483,7 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -526,7 +526,7 @@ def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: s
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -570,7 +570,7 @@ def transfer_file_ipv4_ecn(client_sock: socket.socket, dest_ip: str, file_path: 
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -614,7 +614,7 @@ def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, fi
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -657,7 +657,93 @@ def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, 
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets) + 1)
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_flags(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    flags field.
+
+    @note Bit length
+        The flags field for IPv4 headers is 3 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 3):
+        binary_segment = binary_data[i:i + 3].ljust(3, '0')
+        flag = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, flags=flag)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_frag_offset(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    fragment offset field.
+
+    @note Bit length
+        The fragment offset field for IPv4 headers is 13 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 13):
+        binary_segment = binary_data[i:i + 13].ljust(13, '0')
+        fragment_offset = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, frag=fragment_offset)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -674,8 +760,8 @@ def __get_protocol_header_function_map():
         ("IPv4", "Explicit Congestion Notification (ECN)"): transfer_file_ipv4_ecn,
         ("IPv4", "Total Length"): transfer_file_ipv4_total_length,
         ("IPv4", "Identification"): transfer_file_ipv4_identification,
-        ("IPv4", "Flags"): "F()",
-        ("IPv4", "Fragment Offset"): "F()",
+        ("IPv4", "Flags"): transfer_file_ipv4_flags,
+        ("IPv4", "Fragment Offset"): transfer_file_ipv4_frag_offset,
         ("IPv4", "TTL (Time to Live)"): transfer_file_ipv4_ttl,
         ("IPv4", "Protocol"): "F()",
         ("IPv4", "Header Checksum"): "F()",

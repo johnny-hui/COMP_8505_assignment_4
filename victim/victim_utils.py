@@ -322,8 +322,8 @@ def get_protocol_header_function_map():
         ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
         ("IPv4", "Total Length"): extract_data_ipv4_total_length,
         ("IPv4", "Identification"): extract_data_ipv4_identification,
-        ("IPv4", "Flags"): "F()",
-        ("IPv4", "Fragment Offset"): "F()",
+        ("IPv4", "Flags"): extract_data_ipv4_flags,
+        ("IPv4", "Fragment Offset"): extract_data_ipv4_frag_offset,
         ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
         ("IPv4", "Protocol"): "F()",
         ("IPv4", "Header Checksum"): "F()",
@@ -473,4 +473,44 @@ def extract_data_ipv4_identification(packet):
     if packet.haslayer('IP'):
         identification = packet[IP].id
         binary_data = format(identification, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_flags(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified flags field.
+
+    @note Bit length
+        The flags field for IPv4 headers is 3 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        flags = packet[IP].flags
+        binary_data = format(flags, constants.THREE_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_frag_offset(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified fragment offset field.
+
+    @note Bit length
+        The fragment offset field for IPv4 headers is 13 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        fragment_offset = packet[IP].frag
+        binary_data = format(fragment_offset, constants.THIRTEEN_BIT)
         return binary_data
