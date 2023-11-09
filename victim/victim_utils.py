@@ -304,7 +304,6 @@ def __bin_to_text(binary_data):
     # b) Filter out non-printable characters
     text = ''.join(filter(lambda x: x in string.printable, text))
     return text
-    # return ''.join(chr(int(binary_data[i:i + 8], 2)) for i in range(0, len(binary_data), 8))
 
 
 def covert_data_write_to_file(covert_data: str, filename: str):
@@ -320,7 +319,7 @@ def get_protocol_header_function_map():
         ("IPv4", "Version"): extract_data_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
         ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
-        ("IPv4", "Explicit Congestion Notification (ECN)"): "F()",
+        ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",
         ("IPv4", "Flags"): "F()",
@@ -412,6 +411,26 @@ def extract_data_ipv4_ds(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        ds = (packet[IP].tos >> 2) & 0b111111
+        ds = (packet[IP].tos >> 2) & 0b111111  # Get the first six bits of TOS (starting from most sig. bit)
         binary_data = format(ds, constants.SIX_BIT)  # Adjust to 6 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ecn(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified DS (differentiated services) field.
+
+    @note Bit length
+        The DS field for IPv4 headers is 6 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        ecn = (packet[IP].tos & 0b11)  # Get the last two bits of TOS (starting from least sig. bit)
+        binary_data = format(ecn, constants.SIX_BIT)  # Adjust to 6 bits for each character
         return binary_data
