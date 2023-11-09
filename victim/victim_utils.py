@@ -327,8 +327,8 @@ def get_protocol_header_function_map():
         ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
         ("IPv4", "Protocol"): extract_data_ipv4_protocol,
         ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
-        ("IPv4", "Source Address"): "F()",
-        ("IPv4", "Destination Address"): "F()",
+        ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
+        ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
         ("IPv4", "Options"): "F()",
         ("IPv4", "Padding"): "F()",
 
@@ -553,4 +553,62 @@ def extract_data_ipv4_header_chksum(packet):
     if packet.haslayer('IP'):
         covert_data = packet[IP].chksum
         binary_data = format(covert_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_src_addr(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified source address field.
+
+    @note Bit length
+        The source address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        # a) Initialize Variable
+        binary_data = ""
+
+        # b) Get covert data from the packet
+        covert_data = packet[IP].src
+
+        # c) Get each octet and place in variable
+        ip_octets = covert_data.split('.')  # IP Octet format: XXXX.XXXX.XXXX.XXXX
+        for octet in ip_octets:
+            binary_data += format(int(octet), constants.EIGHT_BIT)
+
+        return binary_data
+
+
+def extract_data_ipv4_dst_addr(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified source address field.
+
+    @note Bit length
+        The source address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        # a) Initialize Variable
+        binary_data = ""
+
+        # b) Get covert data from the packet
+        covert_data = packet[IP].dst
+
+        # c) Get each octet and place in variable
+        ip_octets = covert_data.split('.')  # IP Octet format: XXXX.XXXX.XXXX.XXXX
+        for octet in ip_octets:
+            binary_data += format(int(octet), constants.EIGHT_BIT)
+
         return binary_data
