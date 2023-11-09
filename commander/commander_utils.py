@@ -317,8 +317,8 @@ def protocol_and_field_selector():
     choices = (header, header_field)
 
     # f) Print resulting operations
-    print(constants.PROTOCOL_SELECTED_MSG.format(header))
-    print(constants.FIELD_SELECTED_MSG.format(header_field))
+    print(constants.PROTOCOL_SELECTED_MSG.format(choices[0]))
+    print(constants.FIELD_SELECTED_MSG.format(choices[1]))
     return choices
 
 
@@ -353,6 +353,9 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
     """
     Hides file data covertly in IPv4 headers using the
     TTL field.
+
+    @note Bit length
+        The TTL field for IPv4 headers is 8 bits
 
     @param client_sock:
         A socket representing the client socket
@@ -402,6 +405,9 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
         packets to be dropped; thus may not be a viable solution
         for covert data hiding
 
+    @note Bit length
+        The version field for IPv4 headers is 4 bits
+
     @param client_sock:
         A socket representing the client socket
 
@@ -447,6 +453,9 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
         packets to be dropped; thus may not be a viable solution
         for covert data hiding
 
+    @note Bit length
+        The IHL field for IPv4 headers is 4 bits
+
     @param client_sock:
         A socket representing the client socket
 
@@ -482,12 +491,56 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
         send(packet, verbose=0)
 
 
+def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    DS (differentiated services) field.
+
+    @note Bit length
+        The DS field for IPv4 headers is 6 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 6):
+        binary_segment = binary_data[i:i+6].ljust(6, '0')
+        ds = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, tos=ds)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets) + 1)
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): transfer_file_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): transfer_file_ipv4_ihl,
-        ("IPv4", "TOS (Type of Service)"): "F()",
+        ("IPv4", "DS (Differentiated Services Codepoint)"): "F()",
+        ("IPv4", "Explicit Congestion Notification (ECN)"): "F()",
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",
         ("IPv4", "Flags"): "F()",
@@ -1398,3 +1451,7 @@ def perform_menu_item_11(client_list: dict,
     # Print closing statements
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
+
+
+if __name__ == '__main__':
+    protocol_and_field_selector()

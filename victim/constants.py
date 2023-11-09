@@ -22,6 +22,7 @@ READ_MODE = "r"
 KEYLOG_FILE_NAME = "keylogger.py"
 EIGHT_BIT = "08b"
 FOUR_BIT = "04b"
+SIX_BIT = "06b"
 APPEND_MODE = "a"
 
 

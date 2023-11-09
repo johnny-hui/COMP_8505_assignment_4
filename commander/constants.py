@@ -179,9 +179,10 @@ GET_FILE_NOT_EXIST_MSG = "[+] GET FILE ERROR: The following file path {} does no
 PROTOCOLS_LIST = ["IPv4", "IPv6", "TCP", "UDP", "ICMP"]
 MAX_PROTOCOL_CHOICE = 6
 PROTOCOL_HEADER_FIELD_MAP = {
-    "IPv4": ["Version", "IHL (Internet Header Length)", "TOS (Type of Service)",
-             "Total Length", "Identification", "Flags", "Fragment Offset", "TTL (Time to Live)",
-             "Protocol", "Header Checksum", "Source Address", "Destination Address", "Options", "Padding"],
+    "IPv4": ["Version", "IHL (Internet Header Length)", "DS (Differentiated Services Codepoint)",
+             "Explicit Congestion Notification (ECN)", "Total Length", "Identification", "Flags",
+             "Fragment Offset", "TTL (Time to Live)", "Protocol", "Header Checksum", "Source Address",
+             "Destination Address", "Options", "Padding"],
 
     "IPv6": ["Version", "Traffic Class", "Flow Label", "Payload Length", "Next Header", "Hop Limit",
              "Source Address", "Destination Address"],

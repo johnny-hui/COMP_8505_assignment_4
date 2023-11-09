@@ -295,7 +295,15 @@ def __bin_to_text(binary_data):
         A string containing plain-text characters
     """
     # a) Iterate over binary data
-    return ''.join(chr(int(binary_data[i:i + 8], 2)) for i in range(0, len(binary_data), 8))
+    text = ''
+    for i in range(0, len(binary_data), 8):
+        byte = binary_data[i:i + 8]
+        if byte != '00000000':  # Ensure not to append null bytes
+            text += chr(int(byte, 2))
+
+    # b) Filter out non-printable characters
+    text = ''.join(filter(lambda x: x in string.printable, text))
+    return text
 
 
 def covert_data_write_to_file(covert_data: str, filename: str):
@@ -310,7 +318,8 @@ def get_protocol_header_function_map():
         # a) IPv4 Handlers
         ("IPv4", "Version"): extract_data_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
-        ("IPv4", "TOS (Type of Service)"): "F()",
+        ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
+        ("IPv4", "Explicit Congestion Notification (ECN)"): "F()",
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",
         ("IPv4", "Flags"): "F()",
@@ -333,7 +342,7 @@ def extract_data_ipv4_ttl(packet):
     header and a modified ttl field.
 
     @note Bit length
-        The version field for IPv4 headers is 8 bits maximum
+        The version field for IPv4 headers is 8 bits
 
     @param packet:
         The received packet
@@ -384,4 +393,24 @@ def extract_data_ipv4_ihl(packet):
     if packet.haslayer('IP'):
         ihl = packet[IP].ihl
         binary_data = format(ihl, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ds(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified DS (differentiated services) field.
+
+    @note Bit length
+        The DS field for IPv4 headers is 6 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        ds = packet[IP].tos
+        binary_data = format(ds, constants.SIX_BIT)  # Adjust to 6 bits for each character
         return binary_data
