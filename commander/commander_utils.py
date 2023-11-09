@@ -383,7 +383,10 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
     total_packets = str(len(chunks))
     client_sock.send(total_packets.encode())
 
-    # e) Craft packets for each chunk and embed them with a corresponding TTL value
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Craft packets for each chunk and embed them with a corresponding TTL value
     for i, chunk in enumerate(chunks):
         # Convert the chunk to integer (0-255)
         chunk_value = int(chunk, 2)
@@ -438,7 +441,10 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -486,7 +492,10 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -529,7 +538,10 @@ def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: s
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -573,7 +585,10 @@ def transfer_file_ipv4_ecn(client_sock: socket.socket, dest_ip: str, file_path: 
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -617,7 +632,10 @@ def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, fi
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -660,7 +678,10 @@ def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, 
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -703,7 +724,10 @@ def transfer_file_ipv4_flags(client_sock: socket.socket, dest_ip: str, file_path
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 
@@ -746,7 +770,10 @@ def transfer_file_ipv4_frag_offset(client_sock: socket.socket, dest_ip: str, fil
     total_packets = str(len(packets))
     client_sock.send(total_packets.encode())
 
-    # e) Send packets
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
 

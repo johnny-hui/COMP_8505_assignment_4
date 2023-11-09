@@ -491,7 +491,7 @@ def extract_data_ipv4_flags(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        flags = packet[IP].flags
+        flags = int(packet[IP].flags)
         binary_data = format(flags, constants.THREE_BIT)
         return binary_data
 
