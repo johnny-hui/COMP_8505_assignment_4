@@ -320,7 +320,7 @@ def get_protocol_header_function_map():
         ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
         ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
         ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
-        ("IPv4", "Total Length"): "F()",
+        ("IPv4", "Total Length"): extract_data_ipv4_total_length,
         ("IPv4", "Identification"): "F()",
         ("IPv4", "Flags"): "F()",
         ("IPv4", "Fragment Offset"): "F()",
@@ -432,5 +432,25 @@ def extract_data_ipv4_ecn(packet):
     """
     if packet.haslayer('IP'):
         ecn = (packet[IP].tos & 0b11)  # Get the last two bits of TOS (starting from least sig. bit)
-        binary_data = format(ecn, constants.SIX_BIT)  # Adjust to 6 bits for each character
+        binary_data = format(ecn, constants.TWO_BIT)  # Adjust to 2 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_total_length(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified total length field.
+
+    @note Bit length
+        The total length field for IPv4 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        total_length = packet[IP].len
+        binary_data = format(total_length, constants.SIXTEEN_BIT)  # Adjust to 2 bits for each character
         return binary_data

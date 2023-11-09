@@ -23,6 +23,8 @@ KEYLOG_FILE_NAME = "keylogger.py"
 EIGHT_BIT = "08b"
 FOUR_BIT = "04b"
 SIX_BIT = "06b"
+TWO_BIT = "02b"
+SIXTEEN_BIT = "016b"
 APPEND_MODE = "a"
 
 
