@@ -622,6 +622,49 @@ def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, fi
         send(packet, verbose=0)
 
 
+def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    identification field.
+
+    @note Bit length
+        The identification field for IPv4 headers is 16 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        identification = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, id=identification)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -630,7 +673,7 @@ def __get_protocol_header_function_map():
         ("IPv4", "DS (Differentiated Services Codepoint)"): transfer_file_ipv4_ds,
         ("IPv4", "Explicit Congestion Notification (ECN)"): transfer_file_ipv4_ecn,
         ("IPv4", "Total Length"): transfer_file_ipv4_total_length,
-        ("IPv4", "Identification"): "F()",
+        ("IPv4", "Identification"): transfer_file_ipv4_identification,
         ("IPv4", "Flags"): "F()",
         ("IPv4", "Fragment Offset"): "F()",
         ("IPv4", "TTL (Time to Live)"): transfer_file_ipv4_ttl,
