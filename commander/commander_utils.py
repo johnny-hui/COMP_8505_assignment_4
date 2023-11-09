@@ -614,7 +614,7 @@ def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, fi
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets))
+    total_packets = str(len(packets) + 1)
     client_sock.send(total_packets.encode())
 
     # e) Send packets
@@ -657,7 +657,7 @@ def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, 
         packets.append(packet)
 
     # d) Send total number of packets to the client
-    total_packets = str(len(packets))
+    total_packets = str(len(packets) + 1)
     client_sock.send(total_packets.encode())
 
     # e) Send packets
