@@ -778,6 +778,98 @@ def transfer_file_ipv4_frag_offset(client_sock: socket.socket, dest_ip: str, fil
         send(packet, verbose=0)
 
 
+def transfer_file_ipv4_protocol(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    protocol field.
+
+    @note Bit length
+        The protocol field for IPv4 headers is 8 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        protocol = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, proto=protocol)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_header_chksum(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    header checksum field.
+
+    @note Bit length
+        The header checksum field for IPv4 headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __text_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        checksum = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, chksum=checksum)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -790,8 +882,8 @@ def __get_protocol_header_function_map():
         ("IPv4", "Flags"): transfer_file_ipv4_flags,
         ("IPv4", "Fragment Offset"): transfer_file_ipv4_frag_offset,
         ("IPv4", "TTL (Time to Live)"): transfer_file_ipv4_ttl,
-        ("IPv4", "Protocol"): "F()",
-        ("IPv4", "Header Checksum"): "F()",
+        ("IPv4", "Protocol"): transfer_file_ipv4_protocol,
+        ("IPv4", "Header Checksum"): transfer_file_ipv4_header_chksum,
         ("IPv4", "Source Address"): "F()",
         ("IPv4", "Destination Address"): "F()",
         ("IPv4", "Options"): "F()",

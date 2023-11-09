@@ -325,8 +325,8 @@ def get_protocol_header_function_map():
         ("IPv4", "Flags"): extract_data_ipv4_flags,
         ("IPv4", "Fragment Offset"): extract_data_ipv4_frag_offset,
         ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
-        ("IPv4", "Protocol"): "F()",
-        ("IPv4", "Header Checksum"): "F()",
+        ("IPv4", "Protocol"): extract_data_ipv4_protocol,
+        ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
         ("IPv4", "Source Address"): "F()",
         ("IPv4", "Destination Address"): "F()",
         ("IPv4", "Options"): "F()",
@@ -351,8 +351,8 @@ def extract_data_ipv4_ttl(packet):
         A string containing binary data from ttl field
     """
     if packet.haslayer('IP'):
-        ttl = packet[IP].ttl
-        binary_data = format(ttl, constants.EIGHT_BIT)  # Adjust to 8 bits for each character
+        covert_data = packet[IP].ttl
+        binary_data = format(covert_data, constants.EIGHT_BIT)  # Adjust to 8 bits for each character
         return binary_data
 
 
@@ -371,8 +371,8 @@ def extract_data_ipv4_version(packet):
         A string containing binary data from version field
     """
     if packet.haslayer('IP'):
-        version = packet[IP].version
-        binary_data = format(version, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        covert_data = packet[IP].version
+        binary_data = format(covert_data, constants.FOUR_BIT)  # Adjust to 4 bits for each character
         return binary_data
 
 
@@ -391,8 +391,8 @@ def extract_data_ipv4_ihl(packet):
         A string containing binary data from IHL field
     """
     if packet.haslayer('IP'):
-        ihl = packet[IP].ihl
-        binary_data = format(ihl, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        covert_data = packet[IP].ihl
+        binary_data = format(covert_data, constants.FOUR_BIT)  # Adjust to 4 bits for each character
         return binary_data
 
 
@@ -411,8 +411,8 @@ def extract_data_ipv4_ds(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        ds = (packet[IP].tos >> 2) & 0b111111  # Get the first six bits of TOS (starting from most sig. bit)
-        binary_data = format(ds, constants.SIX_BIT)  # Adjust to 6 bits for each character
+        covert_data = (packet[IP].tos >> 2) & 0b111111  # Get the first six bits of TOS (starting from most sig. bit)
+        binary_data = format(covert_data, constants.SIX_BIT)  # Adjust to 6 bits for each character
         return binary_data
 
 
@@ -431,8 +431,8 @@ def extract_data_ipv4_ecn(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        ecn = (packet[IP].tos & 0b11)  # Get the last two bits of TOS (starting from least sig. bit)
-        binary_data = format(ecn, constants.TWO_BIT)
+        covert_data = (packet[IP].tos & 0b11)  # Get the last two bits of TOS (starting from least sig. bit)
+        binary_data = format(covert_data, constants.TWO_BIT)
         return binary_data
 
 
@@ -451,8 +451,8 @@ def extract_data_ipv4_total_length(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        total_length = packet[IP].len
-        binary_data = format(total_length, constants.SIXTEEN_BIT)
+        covert_data= packet[IP].len
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
         return binary_data
 
 
@@ -471,8 +471,8 @@ def extract_data_ipv4_identification(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        identification = packet[IP].id
-        binary_data = format(identification, constants.SIXTEEN_BIT)
+        covert_data= packet[IP].id
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
         return binary_data
 
 
@@ -491,8 +491,8 @@ def extract_data_ipv4_flags(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        flags = int(packet[IP].flags)
-        binary_data = format(flags, constants.THREE_BIT)
+        covert_data = int(packet[IP].flags)
+        binary_data = format(covert_data, constants.THREE_BIT)
         return binary_data
 
 
@@ -511,6 +511,46 @@ def extract_data_ipv4_frag_offset(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        fragment_offset = packet[IP].frag
-        binary_data = format(fragment_offset, constants.THIRTEEN_BIT)
+        covert_data = packet[IP].frag
+        binary_data = format(covert_data, constants.THIRTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_protocol(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified protocol field.
+
+    @note Bit length
+        The protocol field for IPv4 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].proto
+        binary_data = format(covert_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_header_chksum(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified header checksum field.
+
+    @note Bit length
+        The header checksum field for IPv4 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].chksum
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
         return binary_data
