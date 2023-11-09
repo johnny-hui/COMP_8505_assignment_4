@@ -522,7 +522,7 @@ def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: s
     for i in range(0, len(binary_data), 6):
         binary_segment = binary_data[i:i+6].ljust(6, '0')
         ds = int(binary_segment, 2)
-        packet = IP(dst=dest_ip, tos=ds)
+        packet = IP(dst=dest_ip, tos=(ds << 2))
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -539,7 +539,7 @@ def __get_protocol_header_function_map():
         # a) IPv4 Handlers
         ("IPv4", "Version"): transfer_file_ipv4_version,
         ("IPv4", "IHL (Internet Header Length)"): transfer_file_ipv4_ihl,
-        ("IPv4", "DS (Differentiated Services Codepoint)"): "F()",
+        ("IPv4", "DS (Differentiated Services Codepoint)"): transfer_file_ipv4_ds,
         ("IPv4", "Explicit Congestion Notification (ECN)"): "F()",
         ("IPv4", "Total Length"): "F()",
         ("IPv4", "Identification"): "F()",

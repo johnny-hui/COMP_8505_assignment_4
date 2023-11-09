@@ -294,7 +294,7 @@ def __bin_to_text(binary_data):
     @return text:
         A string containing plain-text characters
     """
-    # a) Iterate over binary data
+    # # a) Iterate over binary data
     text = ''
     for i in range(0, len(binary_data), 8):
         byte = binary_data[i:i + 8]
@@ -304,6 +304,7 @@ def __bin_to_text(binary_data):
     # b) Filter out non-printable characters
     text = ''.join(filter(lambda x: x in string.printable, text))
     return text
+    # return ''.join(chr(int(binary_data[i:i + 8], 2)) for i in range(0, len(binary_data), 8))
 
 
 def covert_data_write_to_file(covert_data: str, filename: str):
@@ -411,6 +412,6 @@ def extract_data_ipv4_ds(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        ds = packet[IP].tos
+        ds = (packet[IP].tos >> 2) & 0b111111
         binary_data = format(ds, constants.SIX_BIT)  # Adjust to 6 bits for each character
         return binary_data
