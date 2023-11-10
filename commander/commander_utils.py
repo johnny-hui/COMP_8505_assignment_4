@@ -422,11 +422,11 @@ def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_pa
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in a packet
     packets = []
@@ -473,11 +473,11 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -519,11 +519,11 @@ def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: s
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -565,11 +565,11 @@ def transfer_file_ipv4_ecn(client_sock: socket.socket, dest_ip: str, file_path: 
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -612,11 +612,11 @@ def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, fi
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -659,11 +659,11 @@ def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, 
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -705,11 +705,11 @@ def transfer_file_ipv4_flags(client_sock: socket.socket, dest_ip: str, file_path
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -751,11 +751,11 @@ def transfer_file_ipv4_frag_offset(client_sock: socket.socket, dest_ip: str, fil
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -797,11 +797,11 @@ def transfer_file_ipv4_protocol(client_sock: socket.socket, dest_ip: str, file_p
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -843,11 +843,11 @@ def transfer_file_ipv4_header_chksum(client_sock: socket.socket, dest_ip: str, f
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -889,11 +889,11 @@ def transfer_file_ipv4_src_addr(client_sock: socket.socket, dest_ip: str, file_p
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []
@@ -943,11 +943,11 @@ def transfer_file_ipv4_dst_addr(client_sock: socket.socket, dest_ip: str, file_p
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Put data in packet
     packets = []

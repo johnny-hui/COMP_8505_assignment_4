@@ -3,7 +3,6 @@ import ipaddress
 import os
 import queue
 import socket
-import string
 import sys
 import constants
 import importlib
@@ -280,34 +279,22 @@ def watch_file(client_socket: socket.socket,
         pass
 
 
-def __bin_to_text(binary_data):
-    """
-    Converts binary data to plain-text (ASCII) characters.
-
-    @param binary_data:
-        A string containing binary data extracted from a specific
-        header and field
-
-    @return text:
-        A string containing plain-text characters
-    """
-    # # a) Iterate over binary data
-    text = ''
-    for i in range(0, len(binary_data), 8):
-        byte = binary_data[i:i + 8]
-        if byte != '00000000':  # Ensure not to append null bytes
-            text += chr(int(byte, 2))
-
-    # b) Filter out non-printable characters
-    text = ''.join(filter(lambda x: x in string.printable, text))
-    return text
-
-
 def __bin_to_bytes(binary_string):
     return bytes(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
 
 
 def covert_data_write_to_file(covert_data: str, filename: str):
+    """
+    Creates a file (if does not exist) and writes binary data to the file.
+
+    @param covert_data:
+        A string containing binary data
+
+    @param filename:
+        A string containing the file name
+
+    @return: None
+    """
     if covert_data:
         data = __bin_to_bytes(covert_data)
         with open(filename, constants.WRITE_BINARY_MODE) as f:
