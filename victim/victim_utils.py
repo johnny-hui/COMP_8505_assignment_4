@@ -296,7 +296,7 @@ def covert_data_write_to_file(covert_data: str, filename: str):
     @return: None
     """
     if covert_data:
-        data = __bin_to_bytes(covert_data)
+        data = __bin_to_bytes(covert_data).replace(constants.NULL_BYTE, b'')
         with open(filename, constants.WRITE_BINARY_MODE) as f:
             f.write(data)
 

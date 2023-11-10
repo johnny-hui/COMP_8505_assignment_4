@@ -28,6 +28,7 @@ THREE_BIT = "03b"
 THIRTEEN_BIT = "013b"
 SIXTEEN_BIT = "016b"
 APPEND_MODE = "a"
+NULL_BYTE = b'\x00'
 
 
 OPENING_BANNER = "===================================== || VICTIM PROGRAM || ====================================="
