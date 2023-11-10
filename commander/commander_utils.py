@@ -1,3 +1,4 @@
+import binascii
 import datetime
 import getopt
 import os
@@ -373,11 +374,12 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = __text_to_bin(file_content)
+    binary_data = binascii.hexlify(file_content).decode('utf-8')
+    binary_text_data = __text_to_bin(binary_data)
 
     # c) Split the binary data into chunks that fit within the TTL range (0-255)
     ttl_chunk_size = 8  # MAX SIZE is 8 bits == (1 char)
-    chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
+    chunks = [binary_text_data[i:i + ttl_chunk_size] for i in range(0, len(binary_text_data), ttl_chunk_size)]
 
     # d) Send total number of packets to the client
     total_packets = str(len(chunks))

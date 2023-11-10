@@ -1,3 +1,4 @@
+import binascii
 import getopt
 import ipaddress
 import os
@@ -306,8 +307,8 @@ def __bin_to_text(binary_data):
 def covert_data_write_to_file(covert_data: str, filename: str):
     if covert_data:
         text_data = __bin_to_text(covert_data)
-        with open(filename, constants.APPEND_MODE) as f:
-            f.write(text_data)
+        with open(filename, constants.WRITE_BINARY_MODE) as f:
+            f.write(binascii.unhexlify(text_data).decode())
 
 
 def get_protocol_header_function_map():
