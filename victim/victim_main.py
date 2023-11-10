@@ -229,6 +229,10 @@ if __name__ == '__main__':
                     filename = res[0]
                     choices = (res[1], res[2])  # => (header, header_field)
 
+                    if constants.DESTINATION_ADDRESS_FIELD in choices:
+                        print(constants.FILE_TRANSFER_UNSUCCESSFUL)
+                        continue
+
                     # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
                     print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(choices[0], choices[1]))
@@ -252,9 +256,6 @@ if __name__ == '__main__':
                     # DIFFERENT SNIFFS: If choice is covert with (IPv4/source_ip)
                     if constants.SOURCE_ADDRESS_FIELD in choices:
                         received_packets = sniff(filter="dst port {}".format(source_port), count=count)
-                    elif constants.DESTINATION_ADDRESS_FIELD in choices:
-                        print(constants.FILE_TRANSFER_UNSUCCESSFUL)
-                        break
                     else:  # REGULAR SNIFF
                         received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
