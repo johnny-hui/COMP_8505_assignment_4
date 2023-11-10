@@ -6,7 +6,8 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP, TCP
+from scapy.layers.inet import IP, TCP, IPOption
+from scapy.packet import Raw
 from scapy.sendrecv import send
 import constants
 import ipaddress
@@ -990,6 +991,53 @@ def __transfer_file_ipv4_dst_addr_error_handler(field: str, header: str):
     print(constants.MENU_CLOSING_BANNER)
 
 
+def transfer_file_ipv4_options(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    options (Timestamp) field.
+
+    @note Bit length
+        The timestamp options field for IPv4 headers is set to 4 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i+4].ljust(4, '0')
+        timestamp_value = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / IPOption(timestamp=timestamp_value)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1006,7 +1054,7 @@ def __get_protocol_header_function_map():
         ("IPv4", "Header Checksum"): transfer_file_ipv4_header_chksum,
         ("IPv4", "Source Address"): transfer_file_ipv4_src_addr,
         ("IPv4", "Destination Address"): transfer_file_ipv4_dst_addr,
-        ("IPv4", "Options"): "F()",
+        ("IPv4", "Options"): transfer_file_ipv4_options,
         ("IPv4", "Padding"): "F()",
 
         # b) IPv6 Handlers

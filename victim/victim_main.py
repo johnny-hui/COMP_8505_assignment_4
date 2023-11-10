@@ -232,6 +232,7 @@ if __name__ == '__main__':
                     if constants.DESTINATION_ADDRESS_FIELD in choices:
                         print(constants.FILE_TRANSFER_UNSUCCESSFUL)
                         continue
+                        # return None
 
                     # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
@@ -255,7 +256,8 @@ if __name__ == '__main__':
 
                     # DIFFERENT SNIFFS: If choice is covert with (IPv4/source_ip)
                     if constants.SOURCE_ADDRESS_FIELD in choices:
-                        received_packets = sniff(filter="dst port {}".format(source_port), count=count)
+                        received_packets = sniff(filter="dst host {} and dst port {}"
+                                                 .format(source_ip, source_port), count=count)
                     else:  # REGULAR SNIFF
                         received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 

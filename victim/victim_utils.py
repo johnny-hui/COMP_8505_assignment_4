@@ -7,7 +7,8 @@ import sys
 import constants
 import importlib
 import inotify.adapters
-from scapy.layers.inet import IP
+from scapy.layers.inet import IP, IPOption
+
 
 def parse_arguments():
     # Initialization
@@ -320,7 +321,7 @@ def get_protocol_header_function_map():
         ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
         ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
         ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
-        ("IPv4", "Options"): "F()",
+        ("IPv4", "Options"): extract_data_ipv4_options,
         ("IPv4", "Padding"): "F()",
 
         # b) IPv6 Handlers
@@ -571,7 +572,7 @@ def extract_data_ipv4_src_addr(packet):
         # c) Get each octet and place in variable
         ip_octets = covert_data.split('.')  # IP Octet format: XXXX.XXXX.XXXX.XXXX
         for octet in ip_octets:
-            binary_data += format(int(octet), constants.EIGHT_BIT)
+            binary_data += format(int(octet), constants.THIRTY_TWO_BIT)
 
         return binary_data
 
@@ -603,3 +604,25 @@ def extract_data_ipv4_dst_addr(packet):
             binary_data += format(int(octet), constants.EIGHT_BIT)
 
         return binary_data
+
+
+def extract_data_ipv4_options(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and an options (Timestamp) field.
+
+    @note Bit length
+        The timestamp options field for IPv4 headers is set to 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPOption in packet:
+        timestamp_value = packet.getlayer(IPOption).timestamp
+        binary_data = format(timestamp_value, constants.FOUR_BIT)
+        return binary_data
+    else:
+        return None

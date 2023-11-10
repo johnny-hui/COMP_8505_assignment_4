@@ -210,6 +210,7 @@ IPV4_DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be del
                                          "destination IP addresses")
 SOURCE_ADDRESS_FIELD = "Source Address"
 DESTINATION_ADDRESS_FIELD = "Destination Address"
+TIMESTAMP = "Timestamp"
 
 
 

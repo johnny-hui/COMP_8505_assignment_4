@@ -27,10 +27,10 @@ TWO_BIT = "02b"
 THREE_BIT = "03b"
 THIRTEEN_BIT = "013b"
 SIXTEEN_BIT = "016b"
+THIRTY_TWO_BIT = "032b"
 APPEND_MODE = "a"
 NULL_BYTE = b'\x00'
-STX_BYTE =  b'\x02'
-
+STX_BYTE = b'\x02'
 
 OPENING_BANNER = "===================================== || VICTIM PROGRAM || ====================================="
 MENU_CLOSING_BANNER = ("==================================================================================="
