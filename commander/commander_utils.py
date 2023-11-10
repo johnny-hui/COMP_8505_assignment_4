@@ -6,7 +6,7 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP
+from scapy.layers.inet import IP, TCP
 from scapy.sendrecv import send
 import constants
 import ipaddress
@@ -869,7 +869,8 @@ def transfer_file_ipv4_header_chksum(client_sock: socket.socket, dest_ip: str, f
         send(packet, verbose=0)
 
 
-def transfer_file_ipv4_src_addr(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv4_src_addr(client_sock: socket.socket, client_ip: str,
+                                client_port: int, src_port: int, file_path: str):
     """
     Hides file data covertly in IPv4 headers using the
     source address field.
@@ -880,8 +881,14 @@ def transfer_file_ipv4_src_addr(client_sock: socket.socket, dest_ip: str, file_p
     @param client_sock:
         A socket representing the client socket
 
-    @param dest_ip:
-        A string representing the destination IP
+    @param client_ip:
+        A string representing the client IP
+
+    @param client_port:
+        An integer representing the client port
+
+    @param src_port:
+        An integer representing the source port
 
     @param file_path:
         A string representing the path of the file
@@ -900,7 +907,7 @@ def transfer_file_ipv4_src_addr(client_sock: socket.socket, dest_ip: str, file_p
     for i in range(0, len(binary_data), 32):
         binary_segment = binary_data[i:i + 32].ljust(32, '0')
         src_ip = '.'.join(str(int(binary_segment[j:j + 8], 2)) for j in range(0, 32, 8))
-        packet = IP(src=src_ip, dst=dest_ip)
+        packet = IP(src=src_ip, dst=client_ip) / TCP(sport=src_port, dport=client_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -992,7 +999,8 @@ def __get_protocol_header_function_map():
     }
 
 
-def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choices: tuple):
+def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
+                         source_ip: str, source_port: int, choices: tuple):
     # Initialize map
     header_field_function_map = __get_protocol_header_function_map()
 
@@ -1022,8 +1030,14 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int, choi
             if choices in header_field_function_map:
                 selected_function = header_field_function_map.get(choices)
 
-                if selected_function is not None and callable(selected_function):
+                # Check if choice includes (IPv4 / source address field)
+                if constants.SOURCE_ADDRESS_FIELD in choices:
+                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+                # Otherwise, run as intended
+                elif selected_function is not None and callable(selected_function):
                     selected_function(sock, dest_ip, file_path)
+
                 else:
                     print(constants.CALL_MAP_FUNCTION_ERROR)
                     return None

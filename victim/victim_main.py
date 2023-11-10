@@ -252,9 +252,8 @@ if __name__ == '__main__':
                         return binary_data
 
                     # Start sniffing from the client
-                    received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
-                    # received_packets = sniff(filter="src host {} or dst host {}"
-                    #                          .format(client_address[0], source_ip), count=count)
+                    received_packets = sniff(filter="src host {} or dst port {}".format(client_address[0],
+                                                                                        source_port), count=count)
 
                     # Extract Data -> convert from binary to text -> write to file
                     extracted_data = ''.join(packet_callback(packet)
