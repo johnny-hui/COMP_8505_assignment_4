@@ -146,6 +146,7 @@ GET_KEYLOG_PROCESS_MSG = ("[+] SEARCHING CLIENT: Now searching client/victim (IP
 CREATE_DOWNLOAD_DIRECTORY_PROMPT = "[+] CREATING DIRECTORY: Now creating the following directory: {}"
 DIRECTORY_SUCCESS_MSG = "[+] OPERATION SUCCESS: The directory has been successfully created!"
 READ_MODE = "r"
+READ_BINARY_MODE = "rb"
 FILE_CANNOT_OPEN_ERROR = "[+] ERROR: An error has occurred while opening {} : {}"
 FILE_CANNOT_OPEN_TO_SENDER = "File has been received, but is either corrupted or not present"
 RECEIVING_FILE_MSG = "[+] Receiving file: {}"

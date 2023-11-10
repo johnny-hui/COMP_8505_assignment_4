@@ -1,4 +1,3 @@
-import binascii
 import datetime
 import getopt
 import os
@@ -347,6 +346,10 @@ def __text_to_bin(text):
     return ''.join(format(ord(char), constants.BINARY_MODE) for char in text)
 
 
+def __bytes_to_bin(data):
+    return ''.join(format(byte, constants.BINARY_MODE) for byte in data)
+
+
 # // ===================================== COVERT CHANNEL FUNCTIONS ===================================== //
 
 
@@ -370,16 +373,15 @@ def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: 
     @return: None
     """
     # a) Read the content of the file
-    with open(file_path, constants.READ_MODE) as file:
+    with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
 
     # b) Convert file content to binary
-    binary_data = binascii.hexlify(file_content).decode('utf-8')
-    binary_text_data = __text_to_bin(binary_data)
+    binary_data = __bytes_to_bin(file_content)
 
     # c) Split the binary data into chunks that fit within the TTL range (0-255)
     ttl_chunk_size = 8  # MAX SIZE is 8 bits == (1 char)
-    chunks = [binary_text_data[i:i + ttl_chunk_size] for i in range(0, len(binary_text_data), ttl_chunk_size)]
+    chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
 
     # d) Send total number of packets to the client
     total_packets = str(len(chunks))
