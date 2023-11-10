@@ -29,6 +29,7 @@ THIRTEEN_BIT = "013b"
 SIXTEEN_BIT = "016b"
 APPEND_MODE = "a"
 NULL_BYTE = b'\x00'
+STX_BYTE =  b'\x02'
 
 
 OPENING_BANNER = "===================================== || VICTIM PROGRAM || ====================================="
@@ -101,6 +102,8 @@ COVERT_CONFIGURATION_FROM_CMDR = "[+] Covert Channel Configuration Chosen: {} ->
 COVERT_DATA_PACKET_LOCATION_MSG = "[+] Data Hidden in Packet (Header: {}, Field: {})"
 CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
 SOURCE_ADDRESS_FIELD = "Source Address"
+DESTINATION_ADDRESS_FIELD = "Destination Address"
+FILE_TRANSFER_UNSUCCESSFUL = "[+] FILE TRANSFER UNSUCCESSFUL: Invalid operation was chosen!"
 
 # Transfer File to Commander
 GET_FILE_SIGNAL = "GET FILE"

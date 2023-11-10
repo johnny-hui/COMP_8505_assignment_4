@@ -204,7 +204,13 @@ FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
 CHOICES_NOT_FOUND_IN_MAP_ERROR = ("[+] TRANSFER FILE ERROR: The choices chosen are not defined and not present in "
                                   "function mapping!")
 CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
+IPV4_DESTINATION_ADDRESS_ERROR = ("[+] ACTION DENIED: Performing covert file transfer in the {} field for "
+                                  "the {} header will cause the connection to hang!")
+IPV4_DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivered to random spoofed "
+                                         "destination IP addresses")
 SOURCE_ADDRESS_FIELD = "Source Address"
+DESTINATION_ADDRESS_FIELD = "Destination Address"
+
 
 
 # MENU ITEM 9 - Watch File
