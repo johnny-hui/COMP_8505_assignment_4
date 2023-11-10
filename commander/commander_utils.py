@@ -1030,7 +1030,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
             if choices in header_field_function_map:
                 selected_function = header_field_function_map.get(choices)
 
-                # Check if choice includes (IPv4 / source address field)
+                # If choice is covert with IPv4/source IP address
                 if constants.SOURCE_ADDRESS_FIELD in choices:
                     selected_function(sock, dest_ip, dest_port, source_port, file_path)
 

