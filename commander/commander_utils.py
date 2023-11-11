@@ -387,7 +387,7 @@ def __get_target_ipv6_address_helper(sock: socket.socket, dest_ip: str, dest_por
         if transfer_result[0] == constants.VICTIM_ACK:
             print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.GET_IPV6_SCRIPT_PATH, dest_ip, dest_port))
             print(constants.IPV6_OPERATION_SUCCESS_MSG.format(transfer_result[1], transfer_result[2]))
-            return transfer_result[1], transfer_result[2]
+            return transfer_result[1], int(transfer_result[2])
         else:
             print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
             return None, None

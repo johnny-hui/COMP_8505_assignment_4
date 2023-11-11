@@ -4,6 +4,7 @@ import os
 import queue
 import socket
 import sys
+import time
 
 from scapy.layers.inet6 import IPv6
 
@@ -710,7 +711,7 @@ def receive_get_ipv6_script(client_socket: socket.socket, client_ip: str, client
 
             if __is_valid_ipv6(ipv6):
                 print(constants.IPV6_FOUND_MSG.format(ipv6))
-                client_socket.send((constants.VICTIM_ACK + "/" + ipv6 + "/" + port).encode())  # Transfer Result
+                client_socket.send((constants.VICTIM_ACK + "/" + ipv6 + "/" + str(port)).encode())  # Transfer Result
                 os.remove(file_path)
                 return ipv6, port
             else:

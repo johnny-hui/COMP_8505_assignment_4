@@ -20,11 +20,12 @@ def determine_ipv6_address():
 
         # Extract socket information (host-side) for own IPv6 addr.
         ipv6_address = s.getsockname()[0]
+        port = s.getsockname()[1]
         s.close()
 
-        return ipv6_address
+        return ipv6_address, port
 
     except socket.error:
         print("[+] ERROR: Unable to determine your IPv6 address!")
         s.close()
-        return None
+        return None, None
