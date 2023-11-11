@@ -333,7 +333,7 @@ def get_protocol_header_function_map():
 
         # b) IPv6 Handlers
         ("IPv6", "Version"): extract_data_ipv6_version,
-        ("IPv6", "Traffic Class"): "F()",
+        ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
         ("IPv6", "Flow Label"): "F()",
         ("IPv6", "Payload Length"): "F()",
         ("IPv6", "Next Header"): "F()",
@@ -746,4 +746,24 @@ def extract_data_ipv6_version(packet):
     if IPv6 in packet:
         version = packet[IPv6].version
         binary_data = format(version, constants.FOUR_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_traffic_class(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified traffic class field.
+
+    @note Bit length
+        The traffic class field for IPv6 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        traffic_class_data = packet[IPv6].tc
+        binary_data = format(traffic_class_data, constants.EIGHT_BIT)
         return binary_data

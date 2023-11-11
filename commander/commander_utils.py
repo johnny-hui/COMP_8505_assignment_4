@@ -1094,9 +1094,58 @@ def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_pa
     for i in range(0, len(binary_data), 4):
         binary_segment = binary_data[i:i + 4].ljust(4, '0')
         version = int(binary_segment, 2)
-        packet = IPv6(dst=dest_ip)
-        packet.version = version
+        packet = IPv6(dst=dest_ip, version=version)
         packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    traffic class field.
+
+    @note Bit length
+        The traffic class field for IPv6 headers is 8 bits
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        traffic_class = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, tc=traffic_class)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
 
     # e) Introduce delay to allow scapy to synchronize between send/sniff calls
     time.sleep(1)
@@ -1125,7 +1174,7 @@ def __get_protocol_header_function_map():
 
         # b) IPv6 Handlers
         ("IPv6", "Version"): transfer_file_ipv6_version,
-        ("IPv6", "Traffic Class"): "F()",
+        ("IPv6", "Traffic Class"): transfer_file_ipv6_traffic_class,
         ("IPv6", "Flow Label"): "F()",
         ("IPv6", "Payload Length"): "F()",
         ("IPv6", "Next Header"): "F()",
