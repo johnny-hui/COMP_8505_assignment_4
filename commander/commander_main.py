@@ -67,7 +67,7 @@ if __name__ == '__main__':
                     if len(connected_clients) == constants.ZERO:
                         print(constants.TRANSFER_FILE_NO_CLIENT_ERROR)
 
-                    # CASE 2: Handle single client in client list
+                    # CASE 2: Send file to a single client in client list
                     if len(connected_clients) == constants.CLIENT_LIST_INITIAL_SIZE:
                         client_socket, (client_ip, client_port, status, status_2) = next(iter(connected_clients.items()))
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                             transfer_file_covert(client_socket, client_ip, client_port,
                                                  source_ip, source_port, choices)
 
-                    # CASE 3: Send keylogger to any specific connected victim
+                    # CASE 3: Send file to any specific connected victim
                     elif len(connected_clients) != constants.ZERO:
                         target_ip = input(constants.TRANSFER_FILE_ENTER_TARGET_IP_FIND_PROMPT)
                         target_port = int(input(constants.TRANSFER_FILE_ENTER_TARGET_PORT_FIND_PROMPT))
