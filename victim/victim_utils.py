@@ -331,7 +331,7 @@ def get_protocol_header_function_map():
         ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
 
         # b) IPv6 Handlers
-        ("IPv6", "Version"): "F()",
+        ("IPv6", "Version"): extract_data_ipv6_version,
         ("IPv6", "Traffic Class"): "F()",
         ("IPv6", "Flow Label"): "F()",
         ("IPv6", "Payload Length"): "F()",

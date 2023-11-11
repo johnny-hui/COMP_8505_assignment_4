@@ -1098,6 +1098,13 @@ def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_pa
         packet.version = version
         packets.append(packet)
 
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
 
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
