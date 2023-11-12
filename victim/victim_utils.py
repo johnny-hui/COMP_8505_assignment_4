@@ -4,14 +4,11 @@ import os
 import queue
 import socket
 import sys
-import time
-
 from scapy.layers.inet6 import IPv6
-
 import constants
 import importlib
 import inotify.adapters
-from scapy.layers.inet import IP, IPOption
+from scapy.layers.inet import IP
 
 
 def parse_arguments():
@@ -867,5 +864,5 @@ def extract_data_ipv6_src_addr(packet):
     """
     if IPv6 in packet:
         src_addr_data = packet[IPv6].src
-        binary_data = ''.join(src_addr_data.split(':'))
+        binary_data = ''.join(format(int(seg, 16), constants.FOUR_BIT) for seg in src_addr_data.split(':'))
         return binary_data

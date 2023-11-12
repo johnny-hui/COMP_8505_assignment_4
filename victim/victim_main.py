@@ -1,7 +1,6 @@
 import threading
 import time
 from scapy.sendrecv import sniff
-
 from victim_utils import *
 
 if __name__ == '__main__':
