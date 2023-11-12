@@ -334,8 +334,8 @@ def get_protocol_header_function_map():
         # b) IPv6 Handlers
         ("IPv6", "Version"): extract_data_ipv6_version,
         ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
-        ("IPv6", "Flow Label"): "F()",
-        ("IPv6", "Payload Length"): "F()",
+        ("IPv6", "Flow Label"): extract_data_ipv6_flow_label,
+        ("IPv6", "Payload Length"): extract_data_ipv6_payload_length,
         ("IPv6", "Next Header"): "F()",
         ("IPv6", "Hop Limit"): "F()",
         ("IPv6", "Source Address"): "F()",
@@ -766,4 +766,44 @@ def extract_data_ipv6_traffic_class(packet):
     if IPv6 in packet:
         traffic_class_data = packet[IPv6].tc
         binary_data = format(traffic_class_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_flow_label(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified flow label field.
+
+    @note Bit length
+        The flow label field for IPv6 headers is 20 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        flow_label_data = packet[IPv6].fl
+        binary_data = format(flow_label_data, constants.TWENTY_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_payload_length(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified payload length field.
+
+    @note Bit length
+        The payload length field for IPv6 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        payload_length_data = packet[IPv6].payloadlen
+        binary_data = format(payload_length_data, constants.SIXTEEN_BIT)
         return binary_data

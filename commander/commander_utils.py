@@ -1155,6 +1155,98 @@ def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, f
         send(packet, verbose=0)
 
 
+def transfer_file_ipv6_flow_label(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    flow label field.
+
+    @note Bit length
+        The flow label field for IPv6 headers is 20 bits
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 20):
+        binary_segment = binary_data[i:i + 20].ljust(20, '0')
+        flow_label = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, fl=flow_label)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_payload_length(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    payload length field.
+
+    @note Bit length
+        The payload length field for IPv6 headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        payload_length = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, payloadlen=payload_length)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1175,8 +1267,8 @@ def __get_protocol_header_function_map():
         # b) IPv6 Handlers
         ("IPv6", "Version"): transfer_file_ipv6_version,
         ("IPv6", "Traffic Class"): transfer_file_ipv6_traffic_class,
-        ("IPv6", "Flow Label"): "F()",
-        ("IPv6", "Payload Length"): "F()",
+        ("IPv6", "Flow Label"): transfer_file_ipv6_flow_label,
+        ("IPv6", "Payload Length"): transfer_file_ipv6_payload_length,
         ("IPv6", "Next Header"): "F()",
         ("IPv6", "Hop Limit"): "F()",
         ("IPv6", "Source Address"): "F()",
