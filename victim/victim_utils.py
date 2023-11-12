@@ -804,6 +804,6 @@ def extract_data_ipv6_payload_length(packet):
         A string containing binary data from DS field
     """
     if IPv6 in packet:
-        payload_length_data = packet[IPv6].payloadlen
+        payload_length_data = packet[IPv6].plen
         binary_data = format(payload_length_data, constants.SIXTEEN_BIT)
         return binary_data

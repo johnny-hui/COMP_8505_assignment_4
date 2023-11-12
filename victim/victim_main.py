@@ -267,8 +267,12 @@ if __name__ == '__main__':
                     if constants.SOURCE_ADDRESS_FIELD in choices:
                         received_packets = sniff(filter="dst host {} and dst port {}"
                                                  .format(source_ip, source_port), count=count)
-                    if constants.IPV6 in choices:
-                        received_packets = sniff(filter="ip6 and dst host {}".format(ipv6_ip), count=count)
+
+                    if constants.IPV6 in choices:  # For IPv6 packets
+                        received_packets = sniff(filter="ip6 and dst host {} and dst port {}"
+                                                 .format(ipv6_ip, ipv6_port),
+                                                 count=count)
+
                     else:  # REGULAR SNIFF
                         received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
