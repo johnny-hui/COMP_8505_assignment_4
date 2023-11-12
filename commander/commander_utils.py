@@ -555,7 +555,7 @@ def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: 
     # c) Put data in packet
     packets = []
     for i in range(0, len(binary_data), 4):
-        binary_segment = binary_data[i:i+4].ljust(4, '0')
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
         ihl = int(binary_segment, 2)
         packet = IP(dst=dest_ip, ihl=ihl)
         packets.append(packet)
@@ -601,7 +601,7 @@ def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: s
     # c) Put data in packet
     packets = []
     for i in range(0, len(binary_data), 6):
-        binary_segment = binary_data[i:i+6].ljust(6, '0')
+        binary_segment = binary_data[i:i + 6].ljust(6, '0')
         ds = int(binary_segment, 2)
         packet = IP(dst=dest_ip, tos=(ds << 2))
         packets.append(packet)
@@ -647,7 +647,7 @@ def transfer_file_ipv4_ecn(client_sock: socket.socket, dest_ip: str, file_path: 
     # c) Put data in packet
     packets = []
     for i in range(0, len(binary_data), 2):
-        binary_segment = binary_data[i:i+2].ljust(2, '0')
+        binary_segment = binary_data[i:i + 2].ljust(2, '0')
         ecn = int(binary_segment, 2)
         packet = IP(dst=dest_ip)
         packet.tos = (packet.tos & 0b11111100) | ecn  # Set first 2 bits (ECN) of ToS field
@@ -1062,6 +1062,7 @@ def __transfer_file_dst_addr_error_handler(field: str, header: str):
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
 
+
 # ===================== IPV6 INSERT COVERT DATA FUNCTIONS =====================
 
 def transfer_file_ipv6_version(client_sock: socket.socket,
@@ -1272,6 +1273,169 @@ def transfer_file_ipv6_payload_length(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
+def transfer_file_ipv6_next_header(client_sock: socket.socket,
+                                   dest_ip: str,
+                                   dest_port: int,
+                                   file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    next header field.
+
+    @note Bit length
+        The next header field for IPv6 headers is 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        next_header = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, nh=next_header) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_hop_limit(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    hop limit field.
+
+    @note Bit length
+        The hop limit field for IPv6 headers is 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        hop_limit = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, hlim=hop_limit) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_src_addr(client_sock: socket.socket,
+                                dest_ip: str,
+                                dest_port: int,
+                                file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    source address field.
+
+    @attention: // *** THIS IS SOURCE IP SPOOFING *** //
+                Please use this wisely and with permission!!!
+
+                This will send covert data under (SYN packets) to the victim; however -
+                due to the TCP protocol used here, this forces the victim to send a
+                SYN/ACK packet response to the spoofed addresses.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (16 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 128):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        src_addr = ':'.join([binary_segment[j:j + 4] for j in range(0, 32, 4)])  # 32 bits or 4 bytes per chunk
+        packet = IPv6(dst=dest_ip, src=src_addr) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1294,9 +1458,9 @@ def __get_protocol_header_function_map():
         ("IPv6", "Traffic Class"): transfer_file_ipv6_traffic_class,
         ("IPv6", "Flow Label"): transfer_file_ipv6_flow_label,
         ("IPv6", "Payload Length"): transfer_file_ipv6_payload_length,
-        ("IPv6", "Next Header"): "F()",
-        ("IPv6", "Hop Limit"): "F()",
-        ("IPv6", "Source Address"): "F()",
+        ("IPv6", "Next Header"): transfer_file_ipv6_next_header,
+        ("IPv6", "Hop Limit"): transfer_file_ipv6_hop_limit,
+        ("IPv6", "Source Address"): transfer_file_ipv6_src_addr,
         ("IPv6", "Destination Address"): "F()",
 
         # c) TCP Handlers
@@ -1368,7 +1532,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                     __transfer_file_dst_addr_error_handler(choices[1], choices[0])
                     return None
 
-                # IPv6 Handlers
+                # IPv6 Handlers (Dst. port included for better sniff from the client)
                 elif constants.IPV6 in choices:
                     selected_function(sock, dest_ip, dest_port, file_path)
 
@@ -1466,6 +1630,7 @@ def receive_file(client_socket: socket.socket, client_ip: str, client_port: int)
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
         return None
+
 
 # // ===================================== END OF COVERT CHANNEL FUNCTIONS ===================================== //
 

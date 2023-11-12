@@ -336,9 +336,9 @@ def get_protocol_header_function_map():
         ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
         ("IPv6", "Flow Label"): extract_data_ipv6_flow_label,
         ("IPv6", "Payload Length"): extract_data_ipv6_payload_length,
-        ("IPv6", "Next Header"): "F()",
-        ("IPv6", "Hop Limit"): "F()",
-        ("IPv6", "Source Address"): "F()",
+        ("IPv6", "Next Header"): extract_data_ipv6_next_header,
+        ("IPv6", "Hop Limit"): extract_data_ipv6_hop_limit,
+        ("IPv6", "Source Address"): extract_data_ipv6_src_addr,
         ("IPv6", "Destination Address"): "F()",
 
         # c) TCP Handlers
@@ -806,4 +806,64 @@ def extract_data_ipv6_payload_length(packet):
     if IPv6 in packet:
         payload_length_data = packet[IPv6].plen
         binary_data = format(payload_length_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_next_header(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified next header field.
+
+    @note Bit length
+        The next header field for IPv6 headers is 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        next_header_data = packet[IPv6].nh
+        binary_data = format(next_header_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_hop_limit(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified hop limit field.
+
+    @note Bit length
+        The hop limit field for IPv6 headers is 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        next_header_data = packet[IPv6].hlim
+        binary_data = format(next_header_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_src_addr(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified source address field.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (12 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        src_addr_data = packet[IPv6].src
+        binary_data = ''.join(src_addr_data.split(':'))
         return binary_data
