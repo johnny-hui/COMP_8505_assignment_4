@@ -1419,9 +1419,9 @@ def transfer_file_ipv6_src_addr(client_sock: socket.socket,
 
     # c) Put data in packet
     packets = []
-    for i in range(0, len(binary_data), 8):
-        binary_segment = binary_data[i:i + 8].ljust(8, '0')
-        src_addr = ':'.join([binary_segment[j:j + 4] for j in range(0, 32, 4)])  # 32 bits or 4 bytes per chunk
+    for i in range(0, len(binary_data), 128):  # Change the step size to 128
+        binary_segment = binary_data[i:i + 128].ljust(128, '0')
+        src_addr = ':'.join([binary_segment[j:j + 32] for j in range(0, 128, 32)])  # 32 bits or 4 bytes per chunk
         packet = IPv6(dst=dest_ip, src=src_addr) / TCP(dport=dest_port)
         packets.append(packet)
 

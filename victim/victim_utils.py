@@ -864,5 +864,5 @@ def extract_data_ipv6_src_addr(packet):
     """
     if IPv6 in packet:
         src_addr_data = packet[IPv6].src
-        binary_data = ''.join(format(int(seg, 16), constants.FOUR_BIT) for seg in src_addr_data.split(':'))
+        binary_data = ':'.join(format(int(x, 16), constants.THIRTY_TWO_BIT) for x in src_addr_data.split(':'))
         return binary_data
