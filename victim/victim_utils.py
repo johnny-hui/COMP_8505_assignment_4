@@ -1,3 +1,4 @@
+import binascii
 import getopt
 import ipaddress
 import os
@@ -311,6 +312,23 @@ def covert_data_write_to_file(covert_data: str, filename: str):
             f.write(data)
 
 
+def get_packet_count(client_socket: socket):
+    """
+    Returns the total number of packets from commander for
+    accurate Scapy sniff functionality.
+
+    @param client_socket:
+        The client socket
+
+    @return: count
+        An integer containing the total number of packets
+        to be received
+    """
+    count = int(client_socket.recv(1024).decode())
+    print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
+    return count
+
+
 def get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -336,7 +354,7 @@ def get_protocol_header_function_map():
         ("IPv6", "Next Header"): extract_data_ipv6_next_header,
         ("IPv6", "Hop Limit"): extract_data_ipv6_hop_limit,
         ("IPv6", "Source Address"): extract_data_ipv6_src_addr,
-        ("IPv6", "Destination Address"): "F()",
+        ("IPv6", "Destination Address"): extract_data_ipv6_dst_addr,
 
         # c) TCP Handlers
         ("TCP", "Source Port"): "F()",
@@ -863,6 +881,26 @@ def extract_data_ipv6_src_addr(packet):
         A string containing binary data from DS field
     """
     if IPv6 in packet:
-        src_addr_data = packet[IPv6].src
-        binary_data = ':'.join(format(int(x, 16), constants.THIRTY_TWO_BIT) for x in src_addr_data.split(':'))
+        source_address = packet[IPv6].src
+        binary_data = ''.join(format(int(byte, 16), '08b') for byte in source_address.replace(':', ''))
         return binary_data
+
+
+def extract_data_ipv6_dst_addr(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified destination address field.
+
+    @attention FUNCTIONALITY DISABLED
+        This is not used
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (12 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    return None

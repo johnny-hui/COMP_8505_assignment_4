@@ -219,6 +219,7 @@ if __name__ == '__main__':
                 # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
                     # Initialize Variables
+                    received_packets = []
                     source_ipv6_ip, cmdr_ipv6_addr, source_ipv6_port = "", "", constants.ZERO
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
 
@@ -236,20 +237,10 @@ if __name__ == '__main__':
                         continue
                         # return None
 
-                    # CHECK: If IPv6 header was chosen
-                    if constants.IPV6 in choices:
-                        source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
-                                                                                                   client_address[0],
-                                                                                                   client_address[1])
-
                     # Print configuration
                     print(constants.RECEIVING_FILE_MSG.format(filename))
                     print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(choices[0], choices[1]))
                     print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(choices[0], choices[1]))
-
-                    # Get total count of packets
-                    count = int(client_socket.recv(1024).decode())
-                    print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
 
                     # Get function handler from a map (according to header/field)
                     header_field_function_map = get_protocol_header_function_map()
@@ -264,6 +255,9 @@ if __name__ == '__main__':
 
                     # DIFFERENT SNIFFS: For IPv4 Packets
                     if constants.IPV4 in choices:
+                        # Get total count of packets
+                        count = get_packet_count(client_socket)
+
                         if constants.SOURCE_ADDRESS_FIELD in choices:
                             received_packets = sniff(filter="dst host {} and dst port {}"
                                                      .format(source_ip, source_port), count=count)
@@ -272,6 +266,13 @@ if __name__ == '__main__':
 
                     # DIFFERENT SNIFFS: For IPv6 Packets
                     if constants.IPV6 in choices:
+                        source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
+                                                                                                   client_address[0],
+                                                                                                   client_address[1])
+
+                        # Get total count of packets
+                        count = get_packet_count(client_socket)
+
                         if constants.NEXT_HEADER in choices:
                             received_packets = sniff(filter="src host {} and dst host {}"
                                                      .format(cmdr_ipv6_addr, source_ipv6_ip),
