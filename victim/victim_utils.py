@@ -950,7 +950,7 @@ def extract_data_tcp_hdr_len(packet):
         A string containing binary data from DS field
     """
     if IP in packet and TCP in packet:
-        hdr_len_data = packet[TCP].hdr_len
+        hdr_len_data = packet[TCP].len
         binary_data = format(hdr_len_data, constants.EIGHT_BIT)
         return binary_data
 

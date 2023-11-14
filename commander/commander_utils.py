@@ -1741,7 +1741,7 @@ def transfer_file_tcp_hdr_len(client_sock: socket.socket,
     for i in range(0, len(binary_data), 8):
         binary_segment = binary_data[i:i + 8].ljust(8, '0')
         header_length = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, hdr_len=header_length)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, len=header_length)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1798,7 +1798,7 @@ def transfer_file_tcp_flags(client_sock: socket.socket,
     for i in range(0, len(binary_data), 3):  # 3 bit chunks
         binary_segment = binary_data[i:i + 3].ljust(3, '0')
         flag_data = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, flag=flag_data)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, flags=flag_data)
         packets.append(packet)
 
     # d) Send total number of packets to the client
