@@ -253,7 +253,7 @@ if __name__ == '__main__':
                         binary_data = selected_function(packet)
                         return binary_data
 
-                    # DIFFERENT SNIFFS: For IPv4 Packets
+                    # DIFFERENT SNIFFS: For IPv4 Headers/Field
                     if constants.IPV4 in choices:
                         # Get total count of packets
                         count = get_packet_count(client_socket)
@@ -264,7 +264,7 @@ if __name__ == '__main__':
                         else:  # REGULAR IPv4 SNIFF
                             received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
 
-                    # DIFFERENT SNIFFS: For IPv6 Packets
+                    # DIFFERENT SNIFFS: For IPv6 Headers/Field
                     if constants.IPV6 in choices:
                         source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
                                                                                                    client_address[0],
@@ -281,6 +281,13 @@ if __name__ == '__main__':
                             received_packets = sniff(filter="dst host {} and dst port {}"
                                                      .format(source_ipv6_ip, source_ipv6_port),
                                                      count=count)
+
+                    # DIFFERENT SNIFFS: For TCP Headers/Field
+                    if constants.TCP in choices:
+                        count = get_packet_count(client_socket)
+                        received_packets = sniff(filter="dst host {} and dst port {}"
+                                                 .format(source_ip, source_port),
+                                                 count=count)
 
                     # Extract Data
                     extracted_data = ''.join(packet_callback(packet)

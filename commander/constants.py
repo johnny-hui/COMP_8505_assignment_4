@@ -171,6 +171,7 @@ GET_IPV6_ERROR = "[+] TRANSFER FILE ERROR: An error has occurred while getting I
 IPV6_OPERATION_SUCCESS_MSG = "[+] OPERATION SUCCESSFUL: Victim/Client IPv6 address and port has been found ({}, {})"
 IPV6_DESTINATION_FIELD_ERROR = "[+] TRANSFER FILE ERROR: Covert IPv6 Destination Field Function disabled!"
 IPV4 = "IPv4"
+TCP = "TCP"
 
 
 # MENU ITEM 7 - Get File from Victim

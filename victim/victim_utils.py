@@ -9,7 +9,7 @@ from scapy.layers.inet6 import IPv6
 import constants
 import importlib
 import inotify.adapters
-from scapy.layers.inet import IP
+from scapy.layers.inet import IP, TCP
 
 
 def parse_arguments():
@@ -357,7 +357,7 @@ def get_protocol_header_function_map():
         ("IPv6", "Destination Address"): extract_data_ipv6_dst_addr,
 
         # c) TCP Handlers
-        ("TCP", "Source Port"): "F()",
+        ("TCP", "Source Port"): extract_data_tcp_src_port,
         ("TCP", "Destination Port"): "F()",
         ("TCP", "Sequence Number"): "F()",
         ("TCP", "Acknowledgement Number"): "F()",
@@ -904,3 +904,26 @@ def extract_data_ipv6_dst_addr(packet):
         A string containing binary data from DS field
     """
     return None
+
+
+# ===================== TCP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_tcp_src_port(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified source port field.
+
+    @note Bit length
+        The source port field for IPv6 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        src_port_data = packet[TCP].sport
+        binary_data = format(src_port_data, constants.SIXTEEN_BIT)
+        return binary_data
