@@ -359,7 +359,7 @@ def get_protocol_header_function_map():
         # c) TCP Handlers
         ("TCP", "Source Port"): extract_data_tcp_src_port,
         ("TCP", "Destination Port"): extract_data_tcp_dst_port,
-        ("TCP", "Sequence Number"): "F()",
+        ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): "F()",
         ("TCP", "Header Length"): "F()",
         ("TCP", "Reserved"): "F()",
@@ -946,4 +946,24 @@ def extract_data_tcp_dst_port(packet):
     if IP in packet and TCP in packet:
         dst_port_data = packet[TCP].dport
         binary_data = format(dst_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_seq_num(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified sequence number field.
+
+    @note Bit length
+        The sequence number field for IPv6 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        seq_num_data = packet[TCP].seq
+        binary_data = format(seq_num_data, constants.THIRTY_TWO_BIT)
         return binary_data

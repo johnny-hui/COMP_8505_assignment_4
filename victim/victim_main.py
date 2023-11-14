@@ -287,14 +287,15 @@ if __name__ == '__main__':
                         count = get_packet_count(client_socket)
 
                         if constants.SOURCE_PORT_FIELD in choices:
-                            received_packets = sniff(filter="tcp and src host {} and dst host {} and dst port {} and "
+                            received_packets = sniff(filter="tcp and dst host {} and dst port {} and "
                                                             "(tcp[13] & 0x004 == 0)"  # tcp[13] offset RST flag (0x004)
-                                                     .format(client_address[0], source_ip, source_port),
+                                                     .format(source_ip, source_port),
                                                      count=count)
 
-                        elif constants.DESTINATION_ADDRESS_FIELD in choices:
-                            received_packets = sniff(filter="tcp and src host {} and src port {}"
-                                                     .format(client_address[0], client_address[1]), count=count)
+                        elif constants.DESTINATION_PORT_FIELD in choices:
+                            received_packets = sniff(filter="tcp and dst host {} and src host {} and "
+                                                            "(tcp[13] & 0x004 == 0)"
+                                                     .format(source_ip, client_address[0]), count=count)
 
                         else:
                             received_packets = sniff(filter="tcp and dst host {} and dst port {}"

