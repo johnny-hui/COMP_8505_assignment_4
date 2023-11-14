@@ -298,7 +298,8 @@ if __name__ == '__main__':
                                                      .format(source_ip, client_address[0]), count=count)
 
                         else:
-                            received_packets = sniff(filter="tcp and dst host {} and dst port {}"
+                            received_packets = sniff(filter="tcp and dst host {} and dst port {} "
+                                                            "and tcp[13] & 0x004 == 0"
                                                      .format(source_ip, source_port),
                                                      count=count)
 

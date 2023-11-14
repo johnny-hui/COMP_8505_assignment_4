@@ -329,60 +329,6 @@ def get_packet_count(client_socket: socket):
     return count
 
 
-def get_protocol_header_function_map():
-    return {  # A tuple of [Header, Field] => Function
-        # a) IPv4 Handlers
-        ("IPv4", "Version"): extract_data_ipv4_version,
-        ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
-        ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
-        ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
-        ("IPv4", "Total Length"): extract_data_ipv4_total_length,
-        ("IPv4", "Identification"): extract_data_ipv4_identification,
-        ("IPv4", "Flags"): extract_data_ipv4_flags,
-        ("IPv4", "Fragment Offset"): extract_data_ipv4_frag_offset,
-        ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
-        ("IPv4", "Protocol"): extract_data_ipv4_protocol,
-        ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
-        ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
-        ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
-
-        # b) IPv6 Handlers
-        ("IPv6", "Version"): extract_data_ipv6_version,
-        ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
-        ("IPv6", "Flow Label"): extract_data_ipv6_flow_label,
-        ("IPv6", "Payload Length"): extract_data_ipv6_payload_length,
-        ("IPv6", "Next Header"): extract_data_ipv6_next_header,
-        ("IPv6", "Hop Limit"): extract_data_ipv6_hop_limit,
-        ("IPv6", "Source Address"): extract_data_ipv6_src_addr,
-        ("IPv6", "Destination Address"): extract_data_ipv6_dst_addr,
-
-        # c) TCP Handlers
-        ("TCP", "Source Port"): extract_data_tcp_src_port,
-        ("TCP", "Destination Port"): extract_data_tcp_dst_port,
-        ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
-        ("TCP", "Acknowledgement Number"): "F()",
-        ("TCP", "Header Length"): "F()",
-        ("TCP", "Reserved"): "F()",
-        ("TCP", "Flags"): "F()",
-        ("TCP", "Window Size"): "F()",
-        ("TCP", "Urgent Pointer"): "F()",
-        ("TCP", "Options"): "F()",
-
-        # d) UDP Handlers
-        ("UDP", "Source Port"): "F()",
-        ("UDP", "Destination Port"): "F()",
-        ("UDP", "Length"): "F()",
-        ("UDP", "Checksum"): "F()",
-
-        # e) ICMP Handlers
-        ("ICMP", "Type (Type of Message)"): "F()",
-        ("ICMP", "Code"): "F()",
-        ("ICMP", "Checksum"): "F()",
-        ("ICMP", "Identifier"): "F()",
-        ("ICMP", "Sequence Number"): "F()",
-        ("ICMP", "Timestamp"): "F()",
-    }
-
 # ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
 
 
@@ -967,3 +913,118 @@ def extract_data_tcp_seq_num(packet):
         seq_num_data = packet[TCP].seq
         binary_data = format(seq_num_data, constants.THIRTY_TWO_BIT)
         return binary_data
+
+
+def extract_data_tcp_ack_num(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified acknowledgement number field.
+
+    @note Bit length
+        The acknowledgement number field for IPv6 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        ack_num_data = packet[TCP].ack
+        binary_data = format(ack_num_data, constants.THIRTY_TWO_BIT)
+        return binary_data
+
+
+def extract_data_tcp_hdr_len(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified header length field.
+
+    @note Bit length
+        The header length field for IPv6 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        hdr_len_data = packet[TCP].hdr_len
+        binary_data = format(hdr_len_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_tcp_flags(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and several modified flag fields.
+
+    @note Bit length
+        The flags field for TCP headers is 9 bits for the different
+        flags (ECN, ACK, SYN, FIN, etc.)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        flag_data = packet[TCP].flags
+        binary_data = format(flag_data, constants.THREE_BIT)
+        return binary_data
+
+
+def get_protocol_header_function_map():
+    return {  # A tuple of [Header, Field] => Function
+        # a) IPv4 Handlers
+        ("IPv4", "Version"): extract_data_ipv4_version,
+        ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
+        ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
+        ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
+        ("IPv4", "Total Length"): extract_data_ipv4_total_length,
+        ("IPv4", "Identification"): extract_data_ipv4_identification,
+        ("IPv4", "Flags"): extract_data_ipv4_flags,
+        ("IPv4", "Fragment Offset"): extract_data_ipv4_frag_offset,
+        ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
+        ("IPv4", "Protocol"): extract_data_ipv4_protocol,
+        ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
+        ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
+        ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
+
+        # b) IPv6 Handlers
+        ("IPv6", "Version"): extract_data_ipv6_version,
+        ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
+        ("IPv6", "Flow Label"): extract_data_ipv6_flow_label,
+        ("IPv6", "Payload Length"): extract_data_ipv6_payload_length,
+        ("IPv6", "Next Header"): extract_data_ipv6_next_header,
+        ("IPv6", "Hop Limit"): extract_data_ipv6_hop_limit,
+        ("IPv6", "Source Address"): extract_data_ipv6_src_addr,
+        ("IPv6", "Destination Address"): extract_data_ipv6_dst_addr,
+
+        # c) TCP Handlers
+        ("TCP", "Source Port"): extract_data_tcp_src_port,
+        ("TCP", "Destination Port"): extract_data_tcp_dst_port,
+        ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
+        ("TCP", "Acknowledgement Number"): extract_data_tcp_ack_num,
+        ("TCP", "Header Length"): extract_data_tcp_hdr_len,
+        ("TCP", "Flags"): extract_data_tcp_flags,
+        ("TCP", "Window Size"): "F()",
+        ("TCP", "Urgent Pointer"): "F()",
+        ("TCP", "Options"): "F()",
+
+        # d) UDP Handlers
+        ("UDP", "Source Port"): "F()",
+        ("UDP", "Destination Port"): "F()",
+        ("UDP", "Length"): "F()",
+        ("UDP", "Checksum"): "F()",
+
+        # e) ICMP Handlers
+        ("ICMP", "Type (Type of Message)"): "F()",
+        ("ICMP", "Code"): "F()",
+        ("ICMP", "Checksum"): "F()",
+        ("ICMP", "Identifier"): "F()",
+        ("ICMP", "Sequence Number"): "F()",
+        ("ICMP", "Timestamp"): "F()",
+    }
