@@ -194,8 +194,8 @@ PROTOCOL_HEADER_FIELD_MAP = {
     "IPv6": ["Version", "Traffic Class", "Flow Label", "Payload Length", "Next Header", "Hop Limit",
              "Source Address", "Destination Address"],
 
-    "TCP": ["Source Port", "Destination Port", "Sequence Number", "Acknowledgement Number", "Header Length",
-            "Flags", "Window Size", "Urgent Pointer", "Options"],
+    "TCP": ["Source Port", "Destination Port", "Sequence Number", "Acknowledgement Number", "Data Offset",
+            "Reserved", "Flags", "Window Size", "Urgent Pointer", "Options"],
 
     "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
 

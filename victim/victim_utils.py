@@ -935,13 +935,13 @@ def extract_data_tcp_ack_num(packet):
         return binary_data
 
 
-def extract_data_tcp_hdr_len(packet):
+def extract_data_tcp_data_offset(packet):
     """
     A handler function to extract data from packets with TCP
-    header and a modified header length field.
+    header and a modified data offset field.
 
     @note Bit length
-        The header length field for IPv6 headers is 8 bits
+        The data offset field for IPv6 headers is 4 bits
 
     @param packet:
         The received packet
@@ -950,8 +950,28 @@ def extract_data_tcp_hdr_len(packet):
         A string containing binary data from DS field
     """
     if IP in packet and TCP in packet:
-        hdr_len_data = packet[TCP].len
-        binary_data = format(hdr_len_data, constants.EIGHT_BIT)
+        data_offset_data = packet[TCP].dataofs
+        binary_data = format(data_offset_data, constants.FOUR_BIT)
+        return binary_data
+
+
+def extract_data_tcp_reserved(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified reserved field.
+
+    @note Bit length
+        The reserved field for IPv6 headers is 3 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        reserved_data = packet[TCP].reserved
+        binary_data = format(reserved_data, constants.THREE_BIT)
         return binary_data
 
 
@@ -1008,8 +1028,9 @@ def get_protocol_header_function_map():
         ("TCP", "Destination Port"): extract_data_tcp_dst_port,
         ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): extract_data_tcp_ack_num,
-        ("TCP", "Header Length"): extract_data_tcp_hdr_len,
-        ("TCP", "Flags"): extract_data_tcp_flags,
+        ("TCP", "Data Offset"): extract_data_tcp_data_offset,  # FIX
+        ("TCP", "Reserved"): extract_data_tcp_reserved,  # FIX
+        ("TCP", "Flags"): extract_data_tcp_flags,  # FIX
         ("TCP", "Window Size"): "F()",
         ("TCP", "Urgent Pointer"): "F()",
         ("TCP", "Options"): "F()",
