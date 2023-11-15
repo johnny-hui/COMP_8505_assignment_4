@@ -992,7 +992,7 @@ def extract_data_tcp_flags(packet):
     """
     if IP in packet and TCP in packet:
         flag_data = packet[TCP].flags
-        binary_data = format(flag_data, constants.THREE_BIT)
+        binary_data = format(flag_data, constants.NINE_BIT)
         return binary_data
 
 

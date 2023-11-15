@@ -1855,8 +1855,8 @@ def transfer_file_tcp_flags(client_sock: socket.socket,
 
     # c) Put data in packet
     packets = []
-    for i in range(0, len(binary_data), 3):  # 3 bit chunks
-        binary_segment = binary_data[i:i + 3].ljust(3, '0')
+    for i in range(0, len(binary_data), 9):  # 3 bit chunks
+        binary_segment = binary_data[i:i + 9].ljust(9, '0')
         flag_data = int(binary_segment, 2)
         packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, flags=flag_data)
         packets.append(packet)

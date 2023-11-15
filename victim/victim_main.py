@@ -297,6 +297,10 @@ if __name__ == '__main__':
                                                             "(tcp[13] & 0x004 == 0)"
                                                      .format(source_ip, client_address[0]), count=count)
 
+                        elif constants.FLAG in choices:
+                            received_packets = sniff(filter="tcp and dst host {} and dst port {}"
+                                                     .format(source_ip, source_port),
+                                                     count=count)
                         else:
                             received_packets = sniff(filter="tcp and dst host {} and dst port {} "
                                                             "and tcp[13] & 0x004 == 0"
