@@ -1063,7 +1063,7 @@ def extract_data_tcp_options(packet):
 
     @note Bit length
         The options field for TCP headers is maximum 320 bits (40 bytes)
-        16 bits chosen here for covert channel
+        4 bits chosen here for TimeStamp option
 
     @param packet:
         The received packet
@@ -1072,14 +1072,9 @@ def extract_data_tcp_options(packet):
         A string containing binary data from DS field
     """
     if IP in packet and TCP in packet:
-        binary_data = ""
-        options_list = packet[TCP].options
-
-        # Extract the hidden data from the "WScale" option
-        for option in options_list:
-            if option[0] == "WScale":
-                binary_data = option[1]
-                return binary_data
+        timestamp_option = packet[TCP].options[0][1][0]
+        binary_data = format(timestamp_option, constants.FOUR_BIT)
+        return binary_data
 
 
 def get_protocol_header_function_map():
