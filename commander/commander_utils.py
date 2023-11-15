@@ -2055,7 +2055,7 @@ def transfer_file_tcp_options(client_sock: socket.socket,
 
     @note Bit length
         - The options field for TCP headers is maximum 320 bits (40 bytes)
-        - 4 bits chosen here for TimeStamp option
+        - 16 bits chosen here for TimeStamp option
 
     @param client_sock:
         A socket representing the client socket
@@ -2083,8 +2083,8 @@ def transfer_file_tcp_options(client_sock: socket.socket,
 
     # c) Put data in packet
     packets = []
-    for i in range(0, len(binary_data), 4):  # 16 bit chunks
-        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
         flags = int(binary_segment, 2)
         packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=[("Timestamp", (flags, 0))])
         packets.append(packet)

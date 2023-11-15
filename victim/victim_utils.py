@@ -1063,7 +1063,7 @@ def extract_data_tcp_options(packet):
 
     @note Bit length
         The options field for TCP headers is maximum 320 bits (40 bytes)
-        4 bits chosen here for TimeStamp option
+        16 bits chosen here for TimeStamp option
 
     @param packet:
         The received packet
@@ -1073,7 +1073,7 @@ def extract_data_tcp_options(packet):
     """
     if IP in packet and TCP in packet:
         timestamp_option = packet[TCP].options[0][1][0]
-        binary_data = format(timestamp_option, constants.FOUR_BIT)
+        binary_data = format(timestamp_option, constants.SIXTEEN_BIT)
         return binary_data
 
 
