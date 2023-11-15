@@ -991,8 +991,89 @@ def extract_data_tcp_flags(packet):
         A string containing binary data from DS field
     """
     if IP in packet and TCP in packet:
-        flag_data = packet[TCP].flags
+        flag_data = int(packet[TCP].flags)
         binary_data = format(flag_data, constants.NINE_BIT)
+        return binary_data
+
+
+def extract_data_tcp_window_size(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and window size field.
+
+    @note Bit length
+        The window field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        window_data = packet[TCP].window
+        binary_data = format(window_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_chksum(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and checksum field.
+
+    @note Bit length
+        The checksum field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        chksum_data = packet[TCP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_urgent_ptr(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and urgent pointer field.
+
+    @note Bit length
+        The urgent pointer field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        urg_ptr_data = packet[TCP].urgptr
+        binary_data = format(urg_ptr_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_options(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and options field.
+
+    @note Bit length
+        The options field for TCP headers is maximum 320 bits (40 bytes)
+        16 bits chosen here for covert channel
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        options_data = packet[TCP].options
+        binary_data = format(options_data, constants.SIXTEEN_BIT)
         return binary_data
 
 
@@ -1028,12 +1109,13 @@ def get_protocol_header_function_map():
         ("TCP", "Destination Port"): extract_data_tcp_dst_port,
         ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): extract_data_tcp_ack_num,
-        ("TCP", "Data Offset"): extract_data_tcp_data_offset,  # FIX
-        ("TCP", "Reserved"): extract_data_tcp_reserved,  # FIX
-        ("TCP", "Flags"): extract_data_tcp_flags,  # FIX
-        ("TCP", "Window Size"): "F()",
-        ("TCP", "Urgent Pointer"): "F()",
-        ("TCP", "Options"): "F()",
+        ("TCP", "Data Offset"): extract_data_tcp_data_offset,
+        ("TCP", "Reserved"): extract_data_tcp_reserved,
+        ("TCP", "Flags"): extract_data_tcp_flags,
+        ("TCP", "Window Size"): extract_data_tcp_window_size,
+        ("TCP", "Checksum"): extract_data_tcp_chksum,
+        ("TCP", "Urgent Pointer"): extract_data_tcp_urgent_ptr,
+        ("TCP", "Options"): extract_data_tcp_options,
 
         # d) UDP Handlers
         ("UDP", "Source Port"): "F()",

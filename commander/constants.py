@@ -195,7 +195,7 @@ PROTOCOL_HEADER_FIELD_MAP = {
              "Source Address", "Destination Address"],
 
     "TCP": ["Source Port", "Destination Port", "Sequence Number", "Acknowledgement Number", "Data Offset",
-            "Reserved", "Flags", "Window Size", "Urgent Pointer", "Options"],
+            "Reserved", "Flags", "Window Size", "Checksum", "Urgent Pointer", "Options"],
 
     "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
 
