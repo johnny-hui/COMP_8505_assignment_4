@@ -1072,9 +1072,14 @@ def extract_data_tcp_options(packet):
         A string containing binary data from DS field
     """
     if IP in packet and TCP in packet:
-        options_data = packet[TCP].options
-        binary_data = format(options_data, constants.SIXTEEN_BIT)
-        return binary_data
+        binary_data = ""
+        options_list = packet[TCP].options
+
+        # Extract the hidden data from the "WScale" option
+        for option in options_list:
+            if option[0] == "WScale":
+                binary_data = option[1]
+                return binary_data
 
 
 def get_protocol_header_function_map():

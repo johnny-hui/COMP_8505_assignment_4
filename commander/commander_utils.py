@@ -2087,10 +2087,8 @@ def transfer_file_tcp_options(client_sock: socket.socket,
     packets = []
     for i in range(0, len(binary_data), 16):  # 16 bit chunks
         binary_segment = binary_data[i:i + 16].ljust(16, '0')
-
-        options_data = [('Raw', binary_segment)]
-
-        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=options_data)
+        options_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=[("WScale", options_data)])
         packets.append(packet)
 
     # d) Send total number of packets to the client
