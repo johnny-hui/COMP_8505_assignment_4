@@ -111,6 +111,7 @@ FILE_TRANSFER_UNSUCCESSFUL = "[+] FILE TRANSFER UNSUCCESSFUL: Invalid operation 
 IPV6 = "IPv6"
 IPV4 = "IPv4"
 TCP = "TCP"
+UDP = "UDP"
 FLAG = "Flags"
 DESTINATION_PORT_FIELD = "Destination Port"
 NEXT_HEADER = "Next Header"

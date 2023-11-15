@@ -6,7 +6,7 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP, TCP
+from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.inet6 import IPv6
 from scapy.sendrecv import send
 import constants
@@ -1473,7 +1473,7 @@ def transfer_file_ipv6_dest_addr(client_sock: socket.socket,
     print(constants.IPV6_DESTINATION_FIELD_ERROR)
 
 
-# ===================== IPV6 INSERT COVERT DATA FUNCTIONS =====================
+# ===================== TCP INSERT COVERT DATA FUNCTIONS =====================
 
 
 def transfer_file_tcp_src_port(client_sock: socket.socket,
@@ -2051,11 +2051,11 @@ def transfer_file_tcp_options(client_sock: socket.socket,
                               file_path: str):
     """
     Hides file data covertly in TCP headers using the
-    options field.
+    TimeStamp options field.
 
     @note Bit length
         - The options field for TCP headers is maximum 320 bits (40 bytes)
-        - 16 bits chosen here for TimeStamp option
+        - 16 bits chosen here for TimeStamp option (can be reduced for more covertness)
 
     @param client_sock:
         A socket representing the client socket
@@ -2085,8 +2085,69 @@ def transfer_file_tcp_options(client_sock: socket.socket,
     packets = []
     for i in range(0, len(binary_data), 16):  # 16 bit chunks
         binary_segment = binary_data[i:i + 16].ljust(16, '0')
-        flags = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=[("Timestamp", (flags, 0))])
+        timestamp_val = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port,
+                                       dport=dest_port,
+                                       options=[(constants.TIMESTAMP, (timestamp_val, 0))])  # (ts_val, ts_echo)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+# ===================== UDP HEADER COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_udp_src_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in UDP headers using the
+    source port field.
+
+    @note Bit length
+        The source port field for TCP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_src_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / UDP(sport=new_src_port, dport=dest_port)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -2142,7 +2203,7 @@ def __get_protocol_header_function_map():
         ("TCP", "Options"): transfer_file_tcp_options,
 
         # d) UDP Handlers
-        ("UDP", "Source Port"): "F()",
+        ("UDP", "Source Port"): transfer_file_udp_src_port,
         ("UDP", "Destination Port"): "F()",
         ("UDP", "Length"): "F()",
         ("UDP", "Checksum"): "F()",
@@ -2187,14 +2248,15 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
             if choices in header_field_function_map:
                 selected_function = header_field_function_map.get(choices)
 
-                # IPv4 Handlers
+                # DIFFERENT HANDLERS: IPv4
                 if constants.IPV4 in choices:
                     if constants.SOURCE_ADDRESS_FIELD in choices:
                         selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
                     elif selected_function is not None and callable(selected_function):
                         selected_function(sock, dest_ip, file_path)
 
-                # IPv6 Handlers
+                # DIFFERENT HANDLERS: IPv6
                 elif constants.IPV6 in choices:
                     if constants.DESTINATION_ADDRESS_FIELD in choices:
                         __transfer_file_dst_addr_error_handler(choices[1], choices[0])
@@ -2204,8 +2266,8 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                     dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
                     selected_function(sock, dest_ip, dest_port, file_path)
 
-                # TCP Handlers
-                elif constants.TCP in choices:
+                # DIFFERENT HANDLERS: TCP or UDP
+                elif constants.TCP in choices or constants.UDP in choices:
                     selected_function(sock, dest_ip, dest_port, source_port, file_path)
 
                 else:

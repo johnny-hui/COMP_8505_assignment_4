@@ -217,6 +217,7 @@ DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivere
 SOURCE_ADDRESS_FIELD = "Source Address"
 DESTINATION_ADDRESS_FIELD = "Destination Address"
 IPV6 = "IPv6"
+UDP = "UDP"
 TIMESTAMP = "Timestamp"
 FIELD_SELECTION_PROMPT = "[+] Please select a field to hide data in {} header for covert file transfer..."
 GET_IPV6_SCRIPT_PATH = "ipv6_getter.py"

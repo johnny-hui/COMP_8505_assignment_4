@@ -9,7 +9,7 @@ from scapy.layers.inet6 import IPv6
 import constants
 import importlib
 import inotify.adapters
-from scapy.layers.inet import IP, TCP
+from scapy.layers.inet import IP, TCP, UDP
 
 
 def parse_arguments():
@@ -1059,7 +1059,7 @@ def extract_data_tcp_urgent_ptr(packet):
 def extract_data_tcp_options(packet):
     """
     A handler function to extract data from packets with TCP
-    header and options field.
+    header and TimeStamp options field.
 
     @note Bit length
         The options field for TCP headers is maximum 320 bits (40 bytes)
@@ -1074,6 +1074,29 @@ def extract_data_tcp_options(packet):
     if IP in packet and TCP in packet:
         timestamp_option = packet[TCP].options[0][1][0]
         binary_data = format(timestamp_option, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+# ===================== UDP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_udp_src_port(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified source port field.
+
+    @note Bit length
+        The source port field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        src_port_data = packet[UDP].sport
+        binary_data = format(src_port_data, constants.SIXTEEN_BIT)
         return binary_data
 
 
@@ -1118,7 +1141,7 @@ def get_protocol_header_function_map():
         ("TCP", "Options"): extract_data_tcp_options,
 
         # d) UDP Handlers
-        ("UDP", "Source Port"): "F()",
+        ("UDP", "Source Port"): extract_data_udp_src_port,
         ("UDP", "Destination Port"): "F()",
         ("UDP", "Length"): "F()",
         ("UDP", "Checksum"): "F()",

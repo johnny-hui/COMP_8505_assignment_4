@@ -295,7 +295,8 @@ if __name__ == '__main__':
                         elif constants.DESTINATION_PORT_FIELD in choices:
                             received_packets = sniff(filter="tcp and dst host {} and src host {} and "
                                                             "(tcp[13] & 0x004 == 0)"
-                                                     .format(source_ip, client_address[0]), count=count)
+                                                     .format(source_ip, client_address[0]),
+                                                     count=count)
 
                         elif constants.FLAG in choices:  # Capture all flags
                             received_packets = sniff(filter="tcp and dst host {} and dst port {}"
@@ -306,6 +307,14 @@ if __name__ == '__main__':
                                                             "and tcp[13] & 0x004 == 0"
                                                      .format(source_ip, source_port),
                                                      count=count)
+
+                    # DIFFERENT SNIFFS: For UDP Headers/Field
+                    if constants.TCP in choices:
+                        count = get_packet_count(client_socket)
+
+                        received_packets = sniff(filter="udp and dst host {} and dst port {}"
+                                                 .format(source_ip, source_port),
+                                                 count=count)
 
                     # Extract Data
                     extracted_data = ''.join(packet_callback(packet)
