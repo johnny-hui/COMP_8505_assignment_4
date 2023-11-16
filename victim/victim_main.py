@@ -247,11 +247,13 @@ if __name__ == '__main__':
                     if choices in header_field_function_map:
                         selected_function = header_field_function_map.get(choices)
 
+
                     # A callback function for handling of received packets
                     def packet_callback(packet):
                         global filename
                         binary_data = selected_function(packet)
                         return binary_data
+
 
                     # DIFFERENT SNIFFS: For IPv4 Headers/Field
                     if constants.IPV4 in choices:
@@ -309,12 +311,17 @@ if __name__ == '__main__':
                                                      count=count)
 
                     # DIFFERENT SNIFFS: For UDP Headers/Field
-                    if constants.TCP in choices:
+                    if constants.UDP in choices:
                         count = get_packet_count(client_socket)
 
-                        received_packets = sniff(filter="udp and dst host {} and dst port {}"
-                                                 .format(source_ip, source_port),
-                                                 count=count)
+                        if constants.DESTINATION_PORT_FIELD in choices:
+                            received_packets = sniff(filter="tcp and dst host {} and src host {}"
+                                                     .format(source_ip, client_address[0]),
+                                                     count=count)
+                        else:
+                            received_packets = sniff(filter="udp and dst host {} and dst port {}"
+                                                     .format(source_ip, source_port),
+                                                     count=count)
 
                     # Extract Data
                     extracted_data = ''.join(packet_callback(packet)

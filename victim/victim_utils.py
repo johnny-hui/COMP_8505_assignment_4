@@ -1100,6 +1100,66 @@ def extract_data_udp_src_port(packet):
         return binary_data
 
 
+def extract_data_udp_dst_port(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified destination port field.
+
+    @note Bit length
+        The destination port field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        dst_port_data = packet[UDP].dport
+        binary_data = format(dst_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_udp_length(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified length field.
+
+    @note Bit length
+        The length field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        length_data = packet[UDP].len
+        binary_data = format(length_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_udp_chksum(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified checksum field.
+
+    @note Bit length
+        The checksum field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        chksum_data = packet[UDP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
 def get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1142,9 +1202,9 @@ def get_protocol_header_function_map():
 
         # d) UDP Handlers
         ("UDP", "Source Port"): extract_data_udp_src_port,
-        ("UDP", "Destination Port"): "F()",
-        ("UDP", "Length"): "F()",
-        ("UDP", "Checksum"): "F()",
+        ("UDP", "Destination Port"): extract_data_udp_dst_port,
+        ("UDP", "Length"): extract_data_udp_length,
+        ("UDP", "Checksum"): extract_data_udp_chksum,
 
         # e) ICMP Handlers
         ("ICMP", "Type (Type of Message)"): "F()",
