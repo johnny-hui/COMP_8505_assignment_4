@@ -1263,26 +1263,6 @@ def extract_data_icmp_seq_num(packet):
         return binary_data
 
 
-def extract_data_icmp_timestamp(packet):
-    """
-    A handler function to extract data from packets with ICMP
-    header and a modified timestamp field.
-
-    @note Bit length
-        The timestamp field for ICMP headers is maximum 64 bits (8 bytes)
-
-    @param packet:
-        The received packet
-
-    @return binary_data:
-        A string containing binary data from DS field
-    """
-    if IP in packet and ICMP in packet:
-        timestamp_data = packet[ICMP].ts_ori
-        binary_data = format(timestamp_data, constants.SIXTEEN_BIT)
-        return binary_data
-
-
 def get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -1335,5 +1315,4 @@ def get_protocol_header_function_map():
         ("ICMP", "Checksum"): extract_data_icmp_chksum,
         ("ICMP", "Identifier"): extract_data_icmp_identification,
         ("ICMP", "Sequence Number"): extract_data_icmp_seq_num,
-        ("ICMP", "Timestamp"): extract_data_icmp_timestamp,
     }

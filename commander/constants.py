@@ -199,7 +199,7 @@ PROTOCOL_HEADER_FIELD_MAP = {
 
     "UDP": ["Source Port", "Destination Port", "Length", "Checksum"],
 
-    "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Identifier", "Sequence Number", "Timestamp"]
+    "ICMP": ["Type (Type of Message)", "Code", "Checksum", "Identifier", "Sequence Number"]
 }
 PROTOCOL_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - 5: \n"
 HEADER_CHOICE_PROMPT = "[+] Enter a valid integer between 1 - {}: \n"
