@@ -315,13 +315,21 @@ if __name__ == '__main__':
                         count = get_packet_count(client_socket)
 
                         if constants.DESTINATION_PORT_FIELD in choices:
-                            received_packets = sniff(filter="tcp and dst host {} and src host {}"
+                            received_packets = sniff(filter="udp and dst host {} and src host {}"
                                                      .format(source_ip, client_address[0]),
                                                      count=count)
                         else:
                             received_packets = sniff(filter="udp and dst host {} and dst port {}"
                                                      .format(source_ip, source_port),
                                                      count=count)
+
+                    # DIFFERENT SNIFFS: For ICMP Header/Fields
+                    if constants.ICMP in choices:
+                        count = get_packet_count(client_socket)
+
+                        received_packets = sniff(filter="icmp and dst host {} and src host {}"
+                                                 .format(source_ip, client_address[0]),
+                                                 count=count)
 
                     # Extract Data
                     extracted_data = ''.join(packet_callback(packet)

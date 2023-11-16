@@ -9,7 +9,7 @@ from scapy.layers.inet6 import IPv6
 import constants
 import importlib
 import inotify.adapters
-from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.inet import IP, TCP, UDP, ICMP
 
 
 def parse_arguments():
@@ -1086,7 +1086,7 @@ def extract_data_udp_src_port(packet):
     header and a modified source port field.
 
     @note Bit length
-        The source port field for TCP headers is 16 bits (2 bytes)
+        The source port field for UDP headers is 16 bits (2 bytes)
 
     @param packet:
         The received packet
@@ -1106,7 +1106,7 @@ def extract_data_udp_dst_port(packet):
     header and a modified destination port field.
 
     @note Bit length
-        The destination port field for TCP headers is 16 bits (2 bytes)
+        The destination port field for UDP headers is 16 bits (2 bytes)
 
     @param packet:
         The received packet
@@ -1126,7 +1126,7 @@ def extract_data_udp_length(packet):
     header and a modified length field.
 
     @note Bit length
-        The length field for TCP headers is 16 bits (2 bytes)
+        The length field for UDP headers is 16 bits (2 bytes)
 
     @param packet:
         The received packet
@@ -1146,7 +1146,7 @@ def extract_data_udp_chksum(packet):
     header and a modified checksum field.
 
     @note Bit length
-        The checksum field for TCP headers is 16 bits (2 bytes)
+        The checksum field for UDP headers is 16 bits (2 bytes)
 
     @param packet:
         The received packet
@@ -1157,6 +1157,129 @@ def extract_data_udp_chksum(packet):
     if IP in packet and UDP in packet:
         chksum_data = packet[UDP].chksum
         binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+# ===================== ICMP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_icmp_type(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified type field.
+
+    @note Bit length
+        The type field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        type_data = packet[ICMP].type
+        binary_data = format(type_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_icmp_code(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified code field.
+
+    @note Bit length
+        The code field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        code_data = packet[ICMP].code
+        binary_data = format(code_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_icmp_chksum(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified checksum field.
+
+    @note Bit length
+        The checksum field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        chksum_data = packet[ICMP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_icmp_identification(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified identification field.
+
+    @note Bit length
+        The identification field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        id_data = packet[ICMP].id
+        binary_data = format(id_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_icmp_seq_num(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified sequence number field.
+
+    @note Bit length
+        The sequence number field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        seq_num_data = packet[ICMP].seq
+        binary_data = format(seq_num_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_icmp_timestamp(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified timestamp field.
+
+    @note Bit length
+        The timestamp field for ICMP headers is maximum 64 bits (8 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        timestamp_data = packet[ICMP].ts_ori
+        binary_data = format(timestamp_data, constants.SIXTEEN_BIT)
         return binary_data
 
 
@@ -1207,10 +1330,10 @@ def get_protocol_header_function_map():
         ("UDP", "Checksum"): extract_data_udp_chksum,
 
         # e) ICMP Handlers
-        ("ICMP", "Type (Type of Message)"): "F()",
-        ("ICMP", "Code"): "F()",
-        ("ICMP", "Checksum"): "F()",
-        ("ICMP", "Identifier"): "F()",
-        ("ICMP", "Sequence Number"): "F()",
-        ("ICMP", "Timestamp"): "F()",
+        ("ICMP", "Type (Type of Message)"): extract_data_icmp_type,
+        ("ICMP", "Code"): extract_data_icmp_code,
+        ("ICMP", "Checksum"): extract_data_icmp_chksum,
+        ("ICMP", "Identifier"): extract_data_icmp_identification,
+        ("ICMP", "Sequence Number"): extract_data_icmp_seq_num,
+        ("ICMP", "Timestamp"): extract_data_icmp_timestamp,
     }

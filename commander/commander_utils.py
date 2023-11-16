@@ -6,7 +6,7 @@ import sys
 import socket
 import threading
 import time
-from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.inet import IP, TCP, UDP, ICMP
 from scapy.layers.inet6 import IPv6
 from scapy.sendrecv import send
 import constants
@@ -2116,7 +2116,7 @@ def transfer_file_udp_src_port(client_sock: socket.socket,
     source port field.
 
     @note Bit length
-        The source port field for TCP headers is maximum 16 bits (2 bytes)
+        The source port field for UDP headers is maximum 16 bits (2 bytes)
 
     @param client_sock:
         A socket representing the client socket
@@ -2172,7 +2172,7 @@ def transfer_file_udp_dst_port(client_sock: socket.socket,
     destination port field.
 
     @note Bit length
-        The destination port field for TCP headers is maximum 16 bits (2 bytes)
+        The destination port field for UDP headers is maximum 16 bits (2 bytes)
 
     @param client_sock:
         A socket representing the client socket
@@ -2228,7 +2228,7 @@ def transfer_file_udp_length(client_sock: socket.socket,
     length field.
 
     @note Bit length
-        The length field for TCP headers is maximum 16 bits (2 bytes)
+        The length field for UDP headers is maximum 16 bits (2 bytes)
 
     @param client_sock:
         A socket representing the client socket
@@ -2284,7 +2284,7 @@ def transfer_file_udp_chksum(client_sock: socket.socket,
     checksum field.
 
     @note Bit length
-        The checksum field for TCP headers is maximum 16 bits (2 bytes)
+        The checksum field for UDP headers is maximum 16 bits (2 bytes)
 
     @param client_sock:
         A socket representing the client socket
@@ -2316,6 +2316,297 @@ def transfer_file_udp_chksum(client_sock: socket.socket,
         binary_segment = binary_data[i:i + 16].ljust(16, '0')
         chksum_data = int(binary_segment, 2)
         packet = IP(dst=dest_ip) / UDP(sport=src_port, dport=dest_port, chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+# ===================== ICMP HEADER COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_icmp_type(client_sock: socket.socket,
+                            dest_ip: str,
+                            file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    type field.
+
+    @note Bit length
+        The type field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):  # 8 bit chunks
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        type_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(type=type_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_code(client_sock: socket.socket,
+                            dest_ip: str,
+                            file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    code field.
+
+    @note Bit length
+        The code field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):  # 8 bit chunks
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        code_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(code=code_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_chksum(client_sock: socket.socket,
+                              dest_ip: str,
+                              file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    checksum field.
+
+    @note Bit length
+        The checksum field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        chksum_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_identification(client_sock: socket.socket,
+                                      dest_ip: str,
+                                      file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    identification field.
+
+    @note Bit length
+        The identification field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        id_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(id=id_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_seq_num(client_sock: socket.socket,
+                               dest_ip: str,
+                               file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    sequence number field.
+
+    @note Bit length
+        The sequence number field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        seq_num_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(seq=seq_num_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_timestamp(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    timestamp field.
+
+    @note Bit length
+        The timestamp field for ICMP headers is maximum 64 bits (8 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        timestamp_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(ts_ori=timestamp_data)
         packets.append(packet)
 
     # d) Send total number of packets to the client
@@ -2377,12 +2668,12 @@ def __get_protocol_header_function_map():
         ("UDP", "Checksum"): transfer_file_udp_chksum,
 
         # e) ICMP Handlers
-        ("ICMP", "Type (Type of Message)"): "F()",
-        ("ICMP", "Code"): "F()",
-        ("ICMP", "Checksum"): "F()",
-        ("ICMP", "Identifier"): "F()",
-        ("ICMP", "Sequence Number"): "F()",
-        ("ICMP", "Timestamp"): "F()",
+        ("ICMP", "Type (Type of Message)"): transfer_file_icmp_type,
+        ("ICMP", "Code"): transfer_file_icmp_code,
+        ("ICMP", "Checksum"): transfer_file_icmp_chksum,
+        ("ICMP", "Identifier"): transfer_file_icmp_identification,
+        ("ICMP", "Sequence Number"): transfer_file_icmp_seq_num,
+        ("ICMP", "Timestamp"): transfer_file_icmp_timestamp,
     }
 
 
@@ -2437,6 +2728,10 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                 # DIFFERENT HANDLERS: TCP or UDP
                 elif constants.TCP in choices or constants.UDP in choices:
                     selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+                # DIFFERENT HANDLERS: ICMP
+                elif constants.ICMP in choices:
+                    selected_function(sock, dest_ip, file_path)
 
                 else:
                     print(constants.CALL_MAP_FUNCTION_ERROR)
