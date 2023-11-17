@@ -222,6 +222,27 @@ ICMP = "ICMP"
 TIMESTAMP = "Timestamp"
 FIELD_SELECTION_PROMPT = "[+] Please select a field to hide data in {} header for covert file transfer..."
 GET_IPV6_SCRIPT_PATH = "ipv6_getter.py"
+EIGHT_BIT = "08b"
+FOUR_BIT = "04b"
+SIX_BIT = "06b"
+TWO_BIT = "02b"
+THREE_BIT = "03b"
+THIRTEEN_BIT = "013b"
+SIXTEEN_BIT = "016b"
+THIRTY_TWO_BIT = "032b"
+HUNDRED_TWENTY_EIGHT = "0128b"
+NINE_BIT = "09b"
+TWENTY_BIT = "020b"
+APPEND_MODE = "a"
+NULL_BYTE = b'\x00'
+STX_BYTE = b'\x02'
+INVALID_IPV6_ERROR = "[+] INVALID IPV6 ADDRESS: An error has occurred {}"
+DESTINATION_PORT_FIELD = "Destination Port"
+FLAG = "Flags"
+SOURCE_PORT_FIELD = "Source Port"
+NEXT_HEADER = "Next Header"
+CLIENT_TOTAL_PACKET_COUNT_MSG = "Total Number of Packets: {}"
+
 
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"

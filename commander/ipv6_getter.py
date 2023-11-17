@@ -29,6 +29,3 @@ def determine_ipv6_address():
         print("[+] ERROR: Unable to determine your IPv6 address!")
         s.close()
         return None, None
-
-if __name__ == '__main__':
-    print(determine_ipv6_address())

