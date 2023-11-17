@@ -3554,7 +3554,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str,
 
             # Get IPv6 address and port from commander
             cmdr_ipv6_addr, cmdr_ipv6_port = sock.recv(1024).decode().split("/")
-            selected_function(sock, cmdr_ipv6_addr, cmdr_ipv6_port, file_path)
+            selected_function(sock, cmdr_ipv6_addr, int(cmdr_ipv6_port), file_path)
 
         # DIFFERENT HANDLERS: TCP or UDP
         elif constants.TCP in choices or constants.UDP in choices:
