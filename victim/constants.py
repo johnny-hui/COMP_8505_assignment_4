@@ -140,3 +140,4 @@ DESTINATION_ADDRESS_ERROR = ("[+] ACTION DENIED: Performing covert file transfer
                              "the {} header will cause the connection to hang!")
 DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivered to random spoofed "
                                     "destination IP addresses")
+AWAIT_NEXT_OP_MSG = "[+] Awaiting next operation from commander..."

