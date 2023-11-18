@@ -154,6 +154,8 @@ WRITE_BINARY_MODE = "wb"
 TRANSFER_SUCCESS_MSG = "[+] FILE TRANSFER SUCCESSFUL: {} has been transferred successfully!"
 ENTER_TARGET_IP_GET_FILES = "[+] Enter the target (victim) IP address to receive recorded keylog files from: "
 ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive recorded keylog files from: "
+KEYLOGGER_FILE_ENTER_TIP = ("[+] To transfer keylogger file to target/victim, when prompted, enter the following:"
+                            " keylogger.py")
 
 # MENU ITEM 6 - Transfer File to Victim
 TRANSFER_FILE_SIGNAL = "TRANSFER"
@@ -172,7 +174,6 @@ IPV6_OPERATION_SUCCESS_MSG = "[+] OPERATION SUCCESSFUL: Victim/Client IPv6 addre
 IPV6_DESTINATION_FIELD_ERROR = "[+] TRANSFER FILE ERROR: Covert IPv6 Destination Field Function disabled!"
 IPV4 = "IPv4"
 TCP = "TCP"
-
 
 # MENU ITEM 7 - Get File from Victim
 GET_FILE_SIGNAL = "GET FILE"
@@ -242,7 +243,6 @@ FLAG = "Flags"
 SOURCE_PORT_FIELD = "Source Port"
 NEXT_HEADER = "Next Header"
 CLIENT_TOTAL_PACKET_COUNT_MSG = "Total Number of Packets: {}"
-
 
 # MENU ITEM 9 - Watch File
 START_WATCH_FILE_MSG = "[+] [MENU ITEM 9] - Now Watching File"

