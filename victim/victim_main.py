@@ -95,6 +95,7 @@ if __name__ == '__main__':
 
                     # Get configuration from commander (filename, header, header_field)
                     res = client_socket.recv(1024).decode().split("/")
+                    print(res)
                     filename = res[0]
                     choices = (res[1], res[2])  # => (header, header_field)
 
