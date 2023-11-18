@@ -98,6 +98,12 @@ if __name__ == '__main__':
                     filename = res[0]
                     choices = (res[1], res[2])  # => (header, header_field)
 
+                    # CHECK: If invalid file was passed in by commander, catch FILE_DNE and ignore
+                    if res[0] == constants.FILE_DNE:
+                        print(constants.GET_KEYLOGGER_NOT_EXIST_MSG)
+                        continue
+                        # return None
+
                     # CHECK: If destination field choice, do nothing
                     if constants.DESTINATION_ADDRESS_FIELD in choices:
                         print(constants.FILE_TRANSFER_UNSUCCESSFUL)

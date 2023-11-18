@@ -156,6 +156,7 @@ ENTER_TARGET_IP_GET_FILES = "[+] Enter the target (victim) IP address to receive
 ENTER_TARGET_PORT_GET_FILES = "[+] Enter the target (victim) port to receive recorded keylog files from: "
 KEYLOGGER_FILE_ENTER_TIP = ("[+] To transfer keylogger file to target/victim, when prompted, enter the following:"
                             " keylogger.py")
+FILE_DNE = "FILE_DNE"
 
 # MENU ITEM 6 - Transfer File to Victim
 TRANSFER_FILE_SIGNAL = "TRANSFER"

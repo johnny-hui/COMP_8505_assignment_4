@@ -49,6 +49,9 @@ FILE_CANNOT_OPEN_ERROR = "[+] ERROR: An error has occurred while opening {} : {}
 FILE_CANNOT_OPEN_TO_SENDER = "File has been received, but is either corrupted or not present"
 VICTIM_ACK = "ACK"
 CLIENT_RESPONSE = "[+] CLIENT SAYS: {}"
+FILE_DNE = "FILE_DNE"
+GET_KEYLOGGER_NOT_EXIST_MSG = ("[+] GET KEYLOGGER ERROR: Commander provided an invalid or "
+                               "non-existent keylogger file path")
 
 START_KEYLOG_MSG = "START"
 CHECK_KEYLOG = "CHECK"
