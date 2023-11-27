@@ -49,7 +49,7 @@ if __name__ == '__main__':
                 if command == constants.PERFORM_MENU_ITEM_TWO:
                     perform_menu_item_2(connected_clients)
 
-                # MENU ITEM 3 - Transfer keylog program to victim (via. covert channel)
+                # MENU ITEM 3 - Transfer keylog program to victim
                 if command == constants.PERFORM_MENU_ITEM_THREE:
                     perform_menu_item_3(connected_clients)
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
                             print(constants.RETURN_MAIN_MENU_MSG)
                             print(constants.MENU_CLOSING_BANNER)
 
-# MENU ITEM 9 - Watch File
+# MENU ITEM 9 - Watch File (BUG: Files that are nested and in sub-directories)
                 if command == constants.PERFORM_MENU_ITEM_NINE:
                     global_thread = perform_menu_item_9(connected_clients, global_thread, signal_queue)
 

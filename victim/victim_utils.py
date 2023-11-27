@@ -229,6 +229,7 @@ def watch_file(client_socket: socket.socket,
                 # Check signal for stop before processing event
                 if not signal_queue.empty() and signal_queue.get() == constants.STOP_KEYWORD:
                     notifier.remove_watch(file_path)
+                    remove_file(backup_file_name)
                     return None
 
                 if event is not None:
@@ -295,6 +296,7 @@ def __bin_to_bytes(binary_string):
 def covert_data_write_to_file(covert_data: str, filename: str):
     """
     Creates a file (if does not exist) and writes binary data to the file.
+    In addition, it decrypts the data beforehand.
 
     @param covert_data:
         A string containing binary data
